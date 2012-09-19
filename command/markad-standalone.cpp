@@ -2256,6 +2256,8 @@ cMarkAdStandalone::cMarkAdStandalone(const char *Directory, const MarkAdConfig *
         streaminfo = new cMarkAdStreamInfo;
         if (macontext.Info.ChannelName)
             isyslog("channel %s",macontext.Info.ChannelName);
+        if (macontext.Info.VPid.Type==MARKAD_PIDTYPE_VIDEO_H264)
+            macontext.Video.Options.IgnoreAspectRatio=true;	
     }
 
     framecnt=0;

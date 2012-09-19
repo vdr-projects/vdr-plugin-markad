@@ -43,6 +43,15 @@ enum
 
 enum
 {
+    VBORDER_ERROR=-3,
+    VBORDER_UNINITIALIZED=-2,
+    VBORDER_INVISIBLE=-1,
+    VBORDER_NOCHANGE=0,
+    VBORDER_VISIBLE=1
+};
+
+enum
+{
     OV_BEFORE=0,
     OV_AFTER=1
 };
@@ -159,6 +168,22 @@ public:
     void Clear();
 };
 
+class cMarkAdBlackBordersVert
+{
+private:
+    int borderstatus;
+    int borderframenumber;
+    MarkAdContext *macontext;
+public:
+    cMarkAdBlackBordersVert(MarkAdContext *maContext);
+    int Process(int FrameNumber,int *BorderFrameNumber);
+    int Status()
+    {
+        return borderstatus;
+    }
+    void Clear();
+};
+
 class cMarkAdVideo
 {
 private:
@@ -167,6 +192,7 @@ private:
 
     MarkAdAspectRatio aspectratio;
     cMarkAdBlackBordersHoriz *hborder;
+    cMarkAdBlackBordersVert *vborder;    
     cMarkAdLogo *logo;
     cMarkAdOverlap *overlap;
 

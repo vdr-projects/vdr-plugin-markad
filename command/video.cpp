@@ -475,7 +475,6 @@ int cMarkAdLogo::Process(int FrameNumber, int *LogoFrameNumber)
 cMarkAdBlackBordersHoriz::cMarkAdBlackBordersHoriz(MarkAdContext *maContext)
 {
     macontext=maContext;
-
     Clear();
 }
 
@@ -489,7 +488,7 @@ int cMarkAdBlackBordersHoriz::Process(int FrameNumber, int *BorderIFrame)
 {
 #define CHECKHEIGHT 20
 #define BRIGHTNESS 20
-#define OFFSET 5
+#define VOFFSET 5
     if (!macontext) return 0;
     if (!macontext->Video.Data.Valid) return 0;
     if (macontext->Video.Info.FramesPerSecond==0) return 0;
@@ -497,7 +496,7 @@ int cMarkAdBlackBordersHoriz::Process(int FrameNumber, int *BorderIFrame)
     //if (macontext->Video.Info.AspectRatio.Num==4) return 0;
     *BorderIFrame=0;
 
-    int height=macontext->Video.Info.Height-OFFSET;
+    int height=macontext->Video.Info.Height-VOFFSET;
 
     int start=(height-CHECKHEIGHT)*macontext->Video.Data.PlaneLinesize[0];
     int end=height*macontext->Video.Data.PlaneLinesize[0];
@@ -519,8 +518,8 @@ int cMarkAdBlackBordersHoriz::Process(int FrameNumber, int *BorderIFrame)
 
     if (fbottom)
     {
-        start=OFFSET*macontext->Video.Data.PlaneLinesize[0];
-        end=macontext->Video.Data.PlaneLinesize[0]*(CHECKHEIGHT+OFFSET);
+        start=VOFFSET*macontext->Video.Data.PlaneLinesize[0];
+        end=macontext->Video.Data.PlaneLinesize[0]*(CHECKHEIGHT+VOFFSET);
         val=0;
         cnt=0;
         xz=0;
@@ -591,6 +590,118 @@ int cMarkAdBlackBordersHoriz::Process(int FrameNumber, int *BorderIFrame)
         {
             borderframenumber=-1;
             borderstatus=HBORDER_INVISIBLE;
+        }
+    }
+    return 0;
+}
+
+cMarkAdBlackBordersVert::cMarkAdBlackBordersVert(MarkAdContext *maContext)
+{
+    macontext=maContext;
+    Clear();
+}
+
+void cMarkAdBlackBordersVert::Clear()
+{
+    borderstatus=VBORDER_UNINITIALIZED;
+    borderframenumber=-1;
+}
+
+int cMarkAdBlackBordersVert::Process(int FrameNumber, int *BorderIFrame)
+{
+#define CHECKWIDTH 32
+#define BRIGHTNESS 20
+#define HOFFSET 50
+    if (!macontext) return 0;
+    if (!macontext->Video.Data.Valid) return 0;
+    if (macontext->Video.Info.FramesPerSecond==0) return 0;
+    *BorderIFrame=0;
+
+    bool fleft=true,fright=true;
+    int val=0,cnt=0;
+
+    int end=macontext->Video.Data.PlaneLinesize[0]*macontext->Video.Info.Height;
+    int i=0;
+    while (i<end) {
+        for (int x=0; x<CHECKWIDTH; x++)
+        {
+            val+=macontext->Video.Data.Plane[0][HOFFSET+x+i];
+            cnt++;
+        }
+        i+=macontext->Video.Data.PlaneLinesize[0];
+    }
+    val/=cnt;
+    if (val>BRIGHTNESS) fleft=false;
+
+    if (fleft)
+    {
+        val=cnt=i=0;
+        int w=macontext->Video.Info.Width-HOFFSET;
+        while (i<end) {
+            for (int x=0; x<CHECKWIDTH; x++)
+            {
+                val+=macontext->Video.Data.Plane[0][w+x+i];
+                cnt++;
+            }
+            i+=macontext->Video.Data.PlaneLinesize[0];
+        }
+        val/=cnt;
+        if (val>BRIGHTNESS) fright=false;
+    }
+
+    if ((fleft) && (fright))
+    {
+        if (borderframenumber==-1)
+        {
+            borderframenumber=FrameNumber;
+        }
+        else
+        {
+#define MINSECS 240
+            switch (borderstatus)
+            {
+            case VBORDER_UNINITIALIZED:
+                if (FrameNumber>(borderframenumber+macontext->Video.Info.FramesPerSecond*MINSECS))
+                {
+                    borderstatus=VBORDER_VISIBLE;
+                }
+                break;
+
+            case VBORDER_INVISIBLE:
+                if (FrameNumber>(borderframenumber+macontext->Video.Info.FramesPerSecond*MINSECS))
+                {
+                    *BorderIFrame=borderframenumber;
+                    borderstatus=VBORDER_VISIBLE;
+                    return 1; // detected start of black border
+                }
+                break;
+
+            case VBORDER_VISIBLE:
+                borderframenumber=FrameNumber;
+                break;
+            }
+        }
+    }
+    else
+    {
+        if (borderframenumber!=-1)
+        {
+            if (borderstatus==VBORDER_VISIBLE)
+            {
+                *BorderIFrame=borderframenumber;
+                borderstatus=VBORDER_INVISIBLE;
+                borderframenumber=-1;
+                return -1; // detected stop of black border
+            }
+            else
+            {
+                borderframenumber=-1;
+            }
+        }
+        else
+        {
+            borderframenumber=-1;
+            borderstatus=VBORDER_INVISIBLE;
         }
     }
     return 0;
@@ -775,6 +886,11 @@ cMarkAdVideo::cMarkAdVideo(MarkAdContext *maContext)
     memset(&marks,0,sizeof(marks));
 
     hborder=new cMarkAdBlackBordersHoriz(maContext);
+    if (macontext->Info.VPid.Type==MARKAD_PIDTYPE_VIDEO_H264) {
+        vborder=new cMarkAdBlackBordersVert(maContext);
+    } else {
+        vborder=NULL;
+    }
     logo = new cMarkAdLogo(maContext);
     overlap = NULL;
     Clear();
@@ -784,6 +900,7 @@ cMarkAdVideo::~cMarkAdVideo()
 {
     resetmarks();
     if (hborder) delete hborder;
+    if (vborder) delete vborder;
     if (logo) delete logo;
     if (overlap) delete overlap;
 }
@@ -795,6 +912,7 @@ void cMarkAdVideo::Clear()
     framelast=0;
     framebeforelast=0;
     if (hborder) hborder->Clear();
+    if (vborder) vborder->Clear();
     if (logo) logo->Clear();
 }
 
@@ -868,6 +986,21 @@ MarkAdMarks *cMarkAdVideo::Process(int FrameNumber, int FrameNumberNext)
     if ((hret<0) && (hborderframenumber))
     {
         addmark(MT_HBORDERSTOP,hborderframenumber);
+    }
+
+    if (vborder) {
+        int vborderframenumber;
+        int vret=vborder->Process(FrameNumber,&vborderframenumber);
+
+        if ((vret>0) && (vborderframenumber))
+        {
+            addmark(MT_VBORDERSTART,vborderframenumber);
+        }
+
+        if ((vret<0) && (vborderframenumber))
+        {
+            addmark(MT_VBORDERSTOP,vborderframenumber);
+        }
     }
 
     if (!macontext->Video.Options.IgnoreAspectRatio)
