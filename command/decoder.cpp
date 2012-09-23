@@ -103,7 +103,7 @@ fail:
 
 cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
 {
-#if LIBAVCODEC_VERSION_INT < ((53<<16)+(7<<8)+1)  
+#if LIBAVCODEC_VERSION_INT < ((53<<16)+(7<<8)+1)
     avcodec_init();
 #endif
     avcodec_register_all();
@@ -458,6 +458,7 @@ bool cMarkAdDecoder::DecodeVideo(MarkAdContext *maContext,uchar *pkt, int plen)
             {
                 if (SetVideoInfos(maContext,video_context,video_frame)) ret=true;
             }
+            break;
         }
     }
     return ret;

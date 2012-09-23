@@ -493,7 +493,7 @@ int cMarkAdBlackBordersHoriz::Process(int FrameNumber, int *BorderIFrame)
     if (!macontext->Video.Data.Valid) return 0;
     if (macontext->Video.Info.FramesPerSecond==0) return 0;
     // Assumption: If we have 4:3, we should have aspectratio-changes!
-    //if (macontext->Video.Info.AspectRatio.Num==4) return 0;
+    //if (macontext->Video.Info.AspectRatio.Num==4) return 0; // seems not to be true in all countries?
     *BorderIFrame=0;
 
     int height=macontext->Video.Info.Height-VOFFSET;
@@ -537,59 +537,28 @@ int cMarkAdBlackBordersHoriz::Process(int FrameNumber, int *BorderIFrame)
         if (val>BRIGHTNESS) ftop=false;
     }
 
-    if ((fbottom) && (ftop))
-    {
-        if (borderframenumber==-1)
-        {
+    if ((fbottom) && (ftop)) {
+        if (borderframenumber==-1) {
             borderframenumber=FrameNumber;
-        }
-        else
-        {
-#define MINSECS 240
-            switch (borderstatus)
-            {
-            case HBORDER_UNINITIALIZED:
-                if (FrameNumber>(borderframenumber+macontext->Video.Info.FramesPerSecond*MINSECS))
-                {
-                    borderstatus=HBORDER_VISIBLE;
-                }
-                break;
-
-            case HBORDER_INVISIBLE:
+        } else {
+            if (borderstatus!=HBORDER_VISIBLE) {
                 if (FrameNumber>(borderframenumber+macontext->Video.Info.FramesPerSecond*MINSECS))
                 {
                     *BorderIFrame=borderframenumber;
                     borderstatus=HBORDER_VISIBLE;
                     return 1; // detected start of black border
                 }
-                break;
-
-            case HBORDER_VISIBLE:
-                borderframenumber=FrameNumber;
-                break;
             }
         }
-    }
-    else
-    {
-        if (borderframenumber!=-1)
+    } else {
+        if (borderstatus==HBORDER_VISIBLE)
         {
-            if (borderstatus==HBORDER_VISIBLE)
-            {
-                *BorderIFrame=borderframenumber;
-                borderstatus=HBORDER_INVISIBLE;
-                borderframenumber=-1;
-                return -1; // detected stop of black border
-            }
-            else
-            {
-                borderframenumber=-1;
-            }
-        }
-        else
-        {
-            borderframenumber=-1;
+            *BorderIFrame=FrameNumber;
             borderstatus=HBORDER_INVISIBLE;
+            borderframenumber=-1;
+            return -1; // detected stop of black border
+        } else {
+            borderframenumber=-1; // restart from scratch
         }
     }
     return 0;
@@ -615,6 +584,8 @@ int cMarkAdBlackBordersVert::Process(int FrameNumber, int *BorderIFrame)
     if (!macontext) return 0;
     if (!macontext->Video.Data.Valid) return 0;
     if (macontext->Video.Info.FramesPerSecond==0) return 0;
+    // Assumption: If we have 4:3, we should have aspectratio-changes!
+    //if (macontext->Video.Info.AspectRatio.Num==4) return 0; // seems not to be true in all countries?
     *BorderIFrame=0;
 
     bool fleft=true,fright=true;
@@ -649,59 +620,28 @@ int cMarkAdBlackBordersVert::Process(int FrameNumber, int *BorderIFrame)
         if (val>BRIGHTNESS) fright=false;
     }
 
-    if ((fleft) && (fright))
-    {
-        if (borderframenumber==-1)
-        {
+    if ((fleft) && (fright)) {
+        if (borderframenumber==-1) {
             borderframenumber=FrameNumber;
-        }
-        else
-        {
-#define MINSECS 240
-            switch (borderstatus)
-            {
-            case VBORDER_UNINITIALIZED:
-                if (FrameNumber>(borderframenumber+macontext->Video.Info.FramesPerSecond*MINSECS))
-                {
-                    borderstatus=VBORDER_VISIBLE;
-                }
-                break;
-
-            case VBORDER_INVISIBLE:
+        } else {
+            if (borderstatus!=VBORDER_VISIBLE) {
                 if (FrameNumber>(borderframenumber+macontext->Video.Info.FramesPerSecond*MINSECS))
                 {
                     *BorderIFrame=borderframenumber;
                     borderstatus=VBORDER_VISIBLE;
                     return 1; // detected start of black border
                 }
-                break;
-
-            case VBORDER_VISIBLE:
-                borderframenumber=FrameNumber;
-                break;
             }
         }
-    }
-    else
-    {
-        if (borderframenumber!=-1)
+    } else {
+        if (borderstatus==VBORDER_VISIBLE)
         {
-            if (borderstatus==VBORDER_VISIBLE)
-            {
-                *BorderIFrame=borderframenumber;
-                borderstatus=VBORDER_INVISIBLE;
-                borderframenumber=-1;
-                return -1; // detected stop of black border
-            }
-            else
-            {
-                borderframenumber=-1;
-            }
-        }
-        else
-        {
-            borderframenumber=-1;
+            *BorderIFrame=FrameNumber;
             borderstatus=VBORDER_INVISIBLE;
+            borderframenumber=-1;
+            return -1; // detected stop of black border
+        } else {
+            borderframenumber=-1; // restart from scratch
         }
     }
     return 0;
@@ -886,11 +826,7 @@ cMarkAdVideo::cMarkAdVideo(MarkAdContext *maContext)
     memset(&marks,0,sizeof(marks));
 
     hborder=new cMarkAdBlackBordersHoriz(maContext);
-    if (macontext->Info.VPid.Type==MARKAD_PIDTYPE_VIDEO_H264) {
-        vborder=new cMarkAdBlackBordersVert(maContext);
-    } else {
-        vborder=NULL;
-    }
+    vborder=new cMarkAdBlackBordersVert(maContext);
     logo = new cMarkAdLogo(maContext);
     overlap = NULL;
     Clear();
@@ -978,29 +914,27 @@ MarkAdMarks *cMarkAdVideo::Process(int FrameNumber, int FrameNumberNext)
     int hborderframenumber;
     int hret=hborder->Process(FrameNumber,&hborderframenumber);
 
-    if ((hret>0) && (hborderframenumber))
+    if ((hret>0) && (hborderframenumber!=-1))
     {
         addmark(MT_HBORDERSTART,hborderframenumber);
     }
 
-    if ((hret<0) && (hborderframenumber))
+    if ((hret<0) && (hborderframenumber!=-1))
     {
         addmark(MT_HBORDERSTOP,hborderframenumber);
     }
 
-    if (vborder) {
-        int vborderframenumber;
-        int vret=vborder->Process(FrameNumber,&vborderframenumber);
+    int vborderframenumber;
+    int vret=vborder->Process(FrameNumber,&vborderframenumber);
 
-        if ((vret>0) && (vborderframenumber))
-        {
-            addmark(MT_VBORDERSTART,vborderframenumber);
-        }
+    if ((vret>0) && (vborderframenumber!=-1))
+    {
+        addmark(MT_VBORDERSTART,vborderframenumber);
+    }
 
-        if ((vret<0) && (vborderframenumber))
-        {
-            addmark(MT_VBORDERSTOP,vborderframenumber);
-        }
+    if ((vret<0) && (vborderframenumber!=-1))
+    {
+        addmark(MT_VBORDERSTOP,vborderframenumber);
     }
 
     if (!macontext->Video.Options.IgnoreAspectRatio)
@@ -1012,6 +946,18 @@ MarkAdMarks *cMarkAdVideo::Process(int FrameNumber, int FrameNumberNext)
             {
                 addmark(MT_LOGOSTOP,framebeforelast);
                 logo->SetStatusLogoInvisible();
+            }
+
+            if ((vborder->Status()==VBORDER_VISIBLE) && (!start))
+            {
+                addmark(MT_VBORDERSTOP,framebeforelast);
+                vborder->SetStatusBorderInvisible();
+            }
+
+            if ((hborder->Status()==HBORDER_VISIBLE) && (!start))
+            {
+                addmark(MT_HBORDERSTOP,framebeforelast);
+                hborder->SetStatusBorderInvisible();
             }
 
             if ((macontext->Video.Info.AspectRatio.Num==4) &&

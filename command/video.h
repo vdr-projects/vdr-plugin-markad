@@ -34,21 +34,19 @@ enum
 
 enum
 {
-    HBORDER_ERROR=-3,
     HBORDER_UNINITIALIZED=-2,
     HBORDER_INVISIBLE=-1,
-    HBORDER_NOCHANGE=0,
     HBORDER_VISIBLE=1
 };
 
 enum
 {
-    VBORDER_ERROR=-3,
     VBORDER_UNINITIALIZED=-2,
     VBORDER_INVISIBLE=-1,
-    VBORDER_NOCHANGE=0,
     VBORDER_VISIBLE=1
 };
+
+#define MINSECS 240
 
 enum
 {
@@ -165,6 +163,10 @@ public:
     {
         return borderstatus;
     }
+    void SetStatusBorderInvisible() {
+        borderstatus=HBORDER_INVISIBLE;
+        borderframenumber=-1;
+    }
     void Clear();
 };
 
@@ -181,6 +183,10 @@ public:
     {
         return borderstatus;
     }
+    void SetStatusBorderInvisible() {
+        borderstatus=VBORDER_INVISIBLE;
+        borderframenumber=-1;
+    }
     void Clear();
 };
 
@@ -192,7 +198,7 @@ private:
 
     MarkAdAspectRatio aspectratio;
     cMarkAdBlackBordersHoriz *hborder;
-    cMarkAdBlackBordersVert *vborder;    
+    cMarkAdBlackBordersVert *vborder;
     cMarkAdLogo *logo;
     cMarkAdOverlap *overlap;
 
