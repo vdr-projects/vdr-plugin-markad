@@ -70,12 +70,19 @@ void cStatusMarkAd::Replaying(const cControl *UNUSED(Control), const char *UNUSE
 bool cStatusMarkAd::Start(const char *FileName, const char *Name, const bool Direct)
 {
     if ((Direct) && (Get(FileName)!=-1)) return false;
+    if (setup->OSDMessage) {
+
+    }
     cString cmd = cString::sprintf("\"%s\"/markad %s%s%s%s%s%s%s -l \"%s\" %s \"%s\"",
                                    bindir,
                                    setup->Verbose ? " -v " : "",
                                    setup->SaveInfo ? " -I " : "",
                                    setup->GenIndex ? " -G " : "",
-                                   setup->OSDMessage ? " -O " : "",
+#if VDRVERSNUM < 10715
+                                   setup->OSDMessage ? " -O --svdrpport=2001 " : "",
+#else
+                                   setup->OSDMessage ? " -O --svdrpport=6419 " : "",
+#endif
                                    setup->NoMargins ? " -i 4 " : "",
                                    setup->SecondPass ? "" : " --pass1only ",
                                    setup->Log2Rec ? " -R " : "",
