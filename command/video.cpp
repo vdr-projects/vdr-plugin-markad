@@ -338,8 +338,9 @@ int cMarkAdLogo::Detect(int framenumber, int *logoframenumber)
 
     if (processed==1)
     {
-        if ((area.intensity>100) || (area.status!=LOGO_VISIBLE) &&
-                (area.intensity>180))  return LOGO_NOCHANGE;
+        // if we only have one plane we are "vulnerable"
+        // to very bright pictures, so ignore them...
+        if (area.intensity>100) return LOGO_NOCHANGE;
     }
 
     int ret=LOGO_NOCHANGE;

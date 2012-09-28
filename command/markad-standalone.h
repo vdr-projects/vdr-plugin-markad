@@ -16,6 +16,7 @@
 #include "streaminfo.h"
 #include "marks.h"
 
+#define trcs(c) bind_textdomain_codeset("markad",c)
 #define tr(s) dgettext("markad",s)
 
 #define IGNORE_VIDEOINFO 1
@@ -34,7 +35,7 @@ private:
     char *msg;
     pthread_t tid;
     static void *send(void *osd);
-    bool readreply(int fd);
+    bool readreply(int fd, char **reply=NULL);
 public:
     int Send(const char *format, ...);
     cOSDMessage(const char *Host, int Port);
@@ -220,7 +221,7 @@ unsigned Descriptor_Length:
     int skipped;       // skipped bytes in whole file
     bool inBroadCast;  // are we in a broadcast (or ad)?
 
-    time_t GetBroadcastStart(time_t start, int fd);
+    time_t GetBroadcastStart(time_t start, int bstart, int fd);
     void CheckIndexGrowing();
     char *indexFile;
     int sleepcnt;

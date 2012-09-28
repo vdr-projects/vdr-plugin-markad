@@ -111,6 +111,7 @@ cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
     last_qscale_table=NULL;
     skipframes=true;
 
+    addPkt=false;
     noticeERRVID=false;
 
     cpu_set_t cpumask;
@@ -177,19 +178,20 @@ cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
         {
             if (video_codec->capabilities & CODEC_CAP_TRUNCATED)
                 video_context->flags|=CODEC_FLAG_TRUNCATED; // we do not send complete frames
-
+            video_context->flags|=CODEC_FLAG_LOW_DELAY;
             video_context->flags2|=CODEC_FLAG2_FAST; // really?
             video_context->skip_idct=AVDISCARD_ALL;
 
-            av_log_set_level(AV_LOG_FATAL); // silence decoder output
-
-            if (video_codecid==CODEC_ID_H264)
-            {
-                video_context->flags2|=CODEC_FLAG2_CHUNKS; // needed for H264!
-            }
-            else
+            if (video_codecid!=CODEC_ID_H264)
             {
                 video_context->skip_frame=AVDISCARD_NONKEY; // just I-frames
+            } else {
+                video_context->flags2|=CODEC_FLAG2_CHUNKS;
+#if LIBAVCODEC_VERSION_INT >= ((52<<16)+(47<<8)+0)
+                av_log_set_level(AV_LOG_FATAL); // silence decoder output
+#else
+                av_log_set_level(AV_LOG_QUIET);
+#endif
             }
             video_context->codec_id = video_codecid;
             video_context->codec_type = AVMEDIA_TYPE_VIDEO;
@@ -384,26 +386,18 @@ bool cMarkAdDecoder::DecodeVideo(MarkAdContext *maContext,uchar *pkt, int plen)
     if (!video_frame) return false;
     maContext->Video.Data.Valid=false;
 
-    if ((video_context->codec_id==CODEC_ID_H264) && (!video_context->skip_frame))
-    {
-        // with H264 we cannot set skip_frame just to NONKEY, is depends on Interlaced...
-        if (maContext->Video.Info.Height)
-        {
-            if (maContext->Video.Info.Interlaced)
-            {
-                video_context->skip_frame=AVDISCARD_BIDIR; // just P/I-frames
-                video_context->skip_loop_filter=AVDISCARD_BIDIR;
-            }
-            else
-            {
-                video_context->skip_frame=AVDISCARD_NONKEY; // just I-frames
-                video_context->skip_loop_filter=AVDISCARD_NONKEY;
-            }
+    if (video_context->codec_id==CODEC_ID_H264) {
+        if (plen>=5) {
+            if (((pkt[4] & 0x1F)==9) && (pkt[5]==0x10)) addPkt=true;
         }
-        else
-        {
-            return false;
+        if (!addPkt) return false;
+    }
+
+    if (video_context->codec_id==CODEC_ID_MPEG2VIDEO) {
+        if (plen>=5) {
+            if (!pkt[0] && !pkt[1] && (pkt[2]==1) && !pkt[3]  && ((pkt[5] & 8)==8)) addPkt=true;
         }
+        if (!addPkt) return false;
     }
 
     AVPacket avpkt;
@@ -436,6 +430,7 @@ bool cMarkAdDecoder::DecodeVideo(MarkAdContext *maContext,uchar *pkt, int plen)
             {
                 esyslog("error decoding video");
                 noticeERRVID=true;
+                addPkt=false;
             }
             break;
         }
@@ -446,20 +441,10 @@ bool cMarkAdDecoder::DecodeVideo(MarkAdContext *maContext,uchar *pkt, int plen)
         }
         if (video_frame_ready)
         {
-            if (video_context->skip_frame!=AVDISCARD_DEFAULT)
-            {
-                if (last_qscale_table!=video_frame->qscale_table)
-                {
-                    if (SetVideoInfos(maContext,video_context,video_frame)) ret=true;
-                    last_qscale_table=video_frame->qscale_table;
-                }
-            }
-            else
-            {
-                if (SetVideoInfos(maContext,video_context,video_frame)) ret=true;
-            }
-            break;
+            if (SetVideoInfos(maContext,video_context,video_frame)) ret=true;
         }
+        if (!len) break;
     }
+    if (ret) addPkt=false;
     return ret;
 }

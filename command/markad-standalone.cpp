@@ -94,6 +94,7 @@ cOSDMessage::cOSDMessage(const char *Host, int Port)
     msg=NULL;
     host=strdup(Host);
     port=Port;
+    send(this);
 }
 
 cOSDMessage::~cOSDMessage()
@@ -103,10 +104,14 @@ cOSDMessage::~cOSDMessage()
     if (host) free((void*) host);
 }
 
-bool cOSDMessage::readreply(int fd)
+bool cOSDMessage::readreply(int fd, char **reply)
 {
     usleep(400000);
     char c=' ';
+    int repsize=0;
+    int msgsize=0;
+    bool skip=false;
+    if (reply) *reply=NULL;
     do
     {
         struct pollfd fds;
@@ -118,6 +123,22 @@ bool cOSDMessage::readreply(int fd)
         if (ret<=0) return false;
         if (fds.revents!=POLLIN) return false;
         if (read(fd,&c,1)<0) return false;
+        if ((reply) && (!skip) && (c!=10) && (c!=13)) {
+            msgsize++;
+            while ((msgsize+5)>repsize) {
+                repsize+=80;
+                char *tmp=(char *) realloc(*reply,repsize);
+                if (!tmp) {
+                    free(*reply);
+                    *reply=NULL;
+                    skip=true;
+                } else {
+                    *reply=tmp;
+                }
+            }
+            (*reply)[msgsize-1]=c;
+            (*reply)[msgsize]=0;
+        }
     }
     while (c!='\n');
     return true;
@@ -150,21 +171,39 @@ void *cOSDMessage::send(void *posd)
         return NULL;
     }
 
-    if (!osd->readreply(sock))
+    char *reply=NULL;
+    if (!osd->readreply(sock,&reply))
     {
+        if (reply) free(reply);
         close(sock);
         return NULL;
     }
 
     ssize_t ret;
-    ret=write(sock,"MESG ",5);
-    if (ret!=(ssize_t)-1) ret=write(sock,osd->msg,strlen(osd->msg));
-    if (ret!=(ssize_t)-1) ret=write(sock,"\r\n",2);
+    if (osd->msg) {
+        if (reply) free(reply);
+        ret=write(sock,"MESG ",5);
+        if (ret!=(ssize_t)-1) ret=write(sock,osd->msg,strlen(osd->msg));
+        if (ret!=(ssize_t)-1) ret=write(sock,"\r\n",2);
 
-    if (!osd->readreply(sock) || (ret==(ssize_t)-1))
-    {
-        close(sock);
-        return NULL;
+        if (!osd->readreply(sock) || (ret==(ssize_t)-1))
+        {
+            close(sock);
+            return NULL;
+        }
+    } else {
+        if (reply) {
+            char *cs=strrchr(reply,';');
+            if (cs) {
+                cs+=2;
+                trcs(cs);
+            } else {
+                trcs("UTF-8"); // just a guess
+            }
+            free(reply);
+        } else {
+            trcs("UTF-8"); // just a guess
+        }
     }
 
     ret=write(sock,"QUIT\r\n",6);
@@ -312,22 +351,28 @@ void cMarkAdStandalone::CheckStart()
     macontext.Info.AspectRatio.Num=macontext.Video.Info.AspectRatio.Num;
     macontext.Info.AspectRatio.Den=macontext.Video.Info.AspectRatio.Den;
 
-    isyslog("aspectratio of %i:%i detected. %s",
-            macontext.Video.Info.AspectRatio.Num,
-            macontext.Video.Info.AspectRatio.Den,
-            ((macontext.Video.Info.AspectRatio.Num==4) &&
-             (macontext.Video.Info.AspectRatio.Den==3)) ?
-            "logo/border detection disabled" : "");
+    if (macontext.Info.VPid.Type==MARKAD_PIDTYPE_VIDEO_H264) {
+        isyslog("aspectratio of %i:%i detected",
+                macontext.Video.Info.AspectRatio.Num,
+                macontext.Video.Info.AspectRatio.Den);
+    } else {
+        isyslog("aspectratio of %i:%i detected%s",
+                macontext.Video.Info.AspectRatio.Num,
+                macontext.Video.Info.AspectRatio.Den,
+                ((macontext.Video.Info.AspectRatio.Num==4) &&
+                 (macontext.Video.Info.AspectRatio.Den==3)) ?
+                ". logo/border detection disabled" : "");
 
-    if ((macontext.Video.Info.AspectRatio.Num==4) &&
-            (macontext.Video.Info.AspectRatio.Den==3))
-    {
-        bDecodeVideo=false;
-        macontext.Video.Options.IgnoreLogoDetection=true;
-        marks.Del(MT_CHANNELSTART);
-        marks.Del(MT_CHANNELSTOP);
-        // start mark must be around iStart
-        begin=marks.GetAround(macontext.Video.Info.FramesPerSecond*(MAXRANGE*4),iStart,MT_ASPECTSTART);
+        if ((macontext.Video.Info.AspectRatio.Num==4) &&
+                (macontext.Video.Info.AspectRatio.Den==3))
+        {
+            bDecodeVideo=false;
+            macontext.Video.Options.IgnoreLogoDetection=true;
+            marks.Del(MT_CHANNELSTART);
+            marks.Del(MT_CHANNELSTOP);
+            // start mark must be around iStart
+            begin=marks.GetAround(macontext.Video.Info.FramesPerSecond*(MAXRANGE*4),iStart,MT_ASPECTSTART);
+        }
     }
 
     if (!bDecodeVideo)
@@ -696,6 +741,7 @@ bool cMarkAdStandalone::ProcessFile2ndPass(clMark **Mark1, clMark **Mark2,int Nu
     iframe=Frame;
     int actframe=Frame;
     int framecounter=0;
+    int pframe=-1;
 
     MarkAdPos *pos=NULL;
 
@@ -788,7 +834,7 @@ bool cMarkAdStandalone::ProcessFile2ndPass(clMark **Mark1, clMark **Mark2,int Nu
                             if (pn>mSTART) dRes=decoder->DecodeVideo(&macontext,pkt.Data,pkt.Length);
                             if (dRes)
                             {
-                                if ((actframe-iframe)<=3)
+                                if (pframe!=lastiframe)
                                 {
                                     if (pn>mSTART) pos=video->ProcessOverlap(lastiframe,Frames,(pn==mBEFORE));
                                     framecounter++;
@@ -800,6 +846,7 @@ bool cMarkAdStandalone::ProcessFile2ndPass(clMark **Mark1, clMark **Mark2,int Nu
                                     close(f);
                                     return true;
                                 }
+                                pframe=lastiframe;
                             }
                         }
                         tspkt+=len;
@@ -926,6 +973,8 @@ bool cMarkAdStandalone::ProcessFile(int Number)
     int dataread;
     dsyslog("processing file %05i",Number);
 
+    int pframe=-1;
+
     demux->NewFile();
     while ((dataread=read(f,data,datalen))>0)
     {
@@ -974,7 +1023,6 @@ bool cMarkAdStandalone::ProcessFile(int Number)
                                 {
                                     CalculateCheckPositions(tStart*macontext.Video.Info.FramesPerSecond);
                                 }
-
                                 if (macontext.Config->GenIndex)
                                 {
                                     marks.WriteIndex(directory,isTS,demux->Offset(),macontext.Video.Info.Pict_Type,Number);
@@ -1001,12 +1049,11 @@ bool cMarkAdStandalone::ProcessFile(int Number)
                                     dRes=true;
                                 }
                             }
-
                             if ((decoder) && (bDecodeVideo))
                                 dRes=decoder->DecodeVideo(&macontext,pkt.Data,pkt.Length);
                             if (dRes)
                             {
-                                if ((framecnt-iframe)<=3)
+                                if (pframe!=lastiframe)
                                 {
                                     MarkAdMarks *vmarks=video->Process(lastiframe,iframe);
                                     if (vmarks)
@@ -1017,7 +1064,6 @@ bool cMarkAdStandalone::ProcessFile(int Number)
                                         }
                                     }
                                     //SaveFrame(lastiframe);  // TODO: JUST FOR DEBUGGING!
-
                                     if (iStart>0)
                                     {
                                         if ((inBroadCast) && (lastiframe>chkSTART)) CheckStart();
@@ -1026,6 +1072,7 @@ bool cMarkAdStandalone::ProcessFile(int Number)
                                     {
                                         if (lastiframe>chkSTOP) CheckStop();
                                     }
+                                    pframe=lastiframe;
                                 }
                             }
                         }
@@ -1147,7 +1194,7 @@ void cMarkAdStandalone::Process()
         {
             if (length && startTime)
             {
-                if (time(NULL)>(startTime+(time_t) length))
+                if ((time(NULL)>(startTime+(time_t) length)) || (gotendmark))
                 {
                     int iIndexError=false;
                     int tframecnt=macontext.Config->GenIndex ? framecnt : 0;
@@ -1425,7 +1472,7 @@ bool cMarkAdStandalone::SaveInfo()
     return (err==false);
 }
 
-time_t cMarkAdStandalone::GetBroadcastStart(time_t start, int fd)
+time_t cMarkAdStandalone::GetBroadcastStart(time_t start, int bstart, int fd)
 {
     // get broadcast start from atime of directory (if the volume is mounted with noatime)
     struct mntent *ent;
@@ -1457,8 +1504,11 @@ time_t cMarkAdStandalone::GetBroadcastStart(time_t start, int fd)
 
     if ((useatime) && (stat(directory,&statbuf)!=-1))
     {
-        isyslog("getting broadcast start from directory atime");
-        return statbuf.st_atime;
+        if (fabs(difftime(start,statbuf.st_atime))<1800)
+        {
+            isyslog("getting broadcast start from directory atime");
+            return statbuf.st_atime;
+        }
     }
 
     // try to get from mtime
@@ -1490,7 +1540,9 @@ time_t cMarkAdStandalone::GetBroadcastStart(time_t start, int fd)
                 t.tm_sec=0;
                 t.tm_isdst=-1;
                 isyslog("getting broadcast start from directory (can be wrong)");
-                return mktime(&t);
+                time_t e=mktime(&t);
+                e-=(time_t) bstart;
+                return e;
             }
         }
     }
@@ -1541,6 +1593,7 @@ bool cMarkAdStandalone::LoadInfo()
 
     char *line=NULL;
     size_t linelen;
+    int bstart=0;
     while (getline(&line,&linelen,f)!=-1)
     {
         if (line[0]=='C')
@@ -1584,6 +1637,16 @@ bool cMarkAdStandalone::LoadInfo()
                 if (lf) *lf=0;
                 char *cr=strchr(title,13);
                 if (cr) *cr=0;
+            }
+        }
+        if (line[0]=='@')
+        {
+            /* if we have an epgsearch line, we can assume the prestart time */
+            char *pbstart=strstr(line,"<bstart>");
+            if (pbstart) {
+                pbstart+=8;
+                bstart=atoi(pbstart);
+                if ((bstart>3600) || (bstart<0)) bstart=0;
             }
         }
         if (line[0]=='F')
@@ -1647,7 +1710,7 @@ bool cMarkAdStandalone::LoadInfo()
 
     if ((length) && (!bIgnoreTimerInfo) && (startTime))
     {
-        time_t rStart=GetBroadcastStart(startTime,fileno(f));
+        time_t rStart=GetBroadcastStart(startTime,bstart,fileno(f));
         if (rStart)
         {
             tStart=(int) (startTime-rStart);
@@ -2211,7 +2274,7 @@ cMarkAdStandalone::cMarkAdStandalone(const char *Directory, const MarkAdConfig *
     if (config->OSD)
     {
         osd= new cOSDMessage(config->svdrphost,config->svdrpport);
-        if (osd) osd->Send("%s %s",tr("starting markad for"),ptitle);
+        if (osd) osd->Send("%s '%s'",tr("starting markad for"),ptitle);
     }
     else
     {
@@ -2257,7 +2320,7 @@ cMarkAdStandalone::cMarkAdStandalone(const char *Directory, const MarkAdConfig *
         if (macontext.Info.ChannelName)
             isyslog("channel %s",macontext.Info.ChannelName);
         if (macontext.Info.VPid.Type==MARKAD_PIDTYPE_VIDEO_H264)
-            macontext.Video.Options.IgnoreAspectRatio=true;	
+            macontext.Video.Options.IgnoreAspectRatio=true;
     }
 
     framecnt=0;
@@ -2300,11 +2363,11 @@ cMarkAdStandalone::~cMarkAdStandalone()
     {
         if (abort)
         {
-            osd->Send("%s %s",tr("markad aborted for"),ptitle);
+            osd->Send("%s '%s'",tr("markad aborted for"),ptitle);
         }
         else
         {
-            osd->Send("%s %s",tr("markad finished for"),ptitle);
+            osd->Send("%s '%s'",tr("markad finished for"),ptitle);
         }
     }
 

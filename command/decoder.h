@@ -51,6 +51,7 @@ private:
     bool SetVideoInfos(MarkAdContext *maContext,AVCodecContext *Video_Context,
                        AVFrame *Video_Frame);
     bool noticeERRVID;
+    bool addPkt;
 public:
     bool DecodeVideo(MarkAdContext *maContext, uchar *pkt, int plen);
     bool Clear();

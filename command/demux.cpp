@@ -602,7 +602,7 @@ void cTS2Pkt::Clear(AvPacket *Pkt)
         Pkt->Type=0;
         Pkt->Stream=0;
     }
-    sync=false;
+    firstsync=sync=false;
     counter=-1;
     if (queue) queue->Clear();
 }
@@ -1186,7 +1186,7 @@ bool cDemux::vdraddpatpmt(uchar *data, int count)
     // a picture starts @376, vdr outputs 0 (!)
     int pid;
     if (checkts(data,count,pid)!=0) return false;
-    if ((!pid) || (pid==132))
+    if ((!pid) || (pid==132)) // 0=PAT 132=PMT
     {
         last_bplen=0;
         vdroffset+=count;
@@ -1242,10 +1242,7 @@ int cDemux::Process(uchar *Data, int Count, AvPacket *pkt)
     if ((raw) && (!Data) && (!Count))
     {
         uchar Dummy[6];
-        if (TS)
-        {
-        }
-        else
+        if (!TS)
         {
             Dummy[0]=0;
             Dummy[1]=0;
