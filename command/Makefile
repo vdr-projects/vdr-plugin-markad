@@ -83,7 +83,7 @@ i18n: $(I18Npot)
 ### Targets:
 
 markad: $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LIBS) -o $@
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(OBJS) $(LIBS) -o $@
 
 
 MANDIR	= $(DESTDIR)/usr/share/man
