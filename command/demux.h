@@ -326,6 +326,7 @@ private:
     bool h264;
     bool TS;
     uint64_t offset;
+    uint64_t rawoffset;
     int from_oldfile;
     int last_bplen;
 

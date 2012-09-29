@@ -112,6 +112,7 @@ int cPaketQueue::findpktheader(int start, int *streamsize,int *headersize, bool 
         {
             if (scanner==1L)
             {
+                if (buffer[i]==0xE0) longstartcode=false;
                 found=true;
                 break;
             }
@@ -149,6 +150,7 @@ int cPaketQueue::findpktheader(int start, int *streamsize,int *headersize, bool 
         {
             if (scanner==1L)
             {
+                if (buffer[i]==0xE0) longstartcode=false;
                 found=true;
             }
             if ((scanner & 0xFFFFFFF0)==0x1E0L)
@@ -389,9 +391,9 @@ bool cPaketQueue::Put(uchar *Data, int Size)
         if (outptr>(inptr-outptr))
         {
             memcpy(buffer,&buffer[outptr],inptr-outptr);
-            if (scannerstart==inptr) scannerstart-=outptr;
+            scannerstart-=outptr;
             inptr-=outptr;
-            if (pktinfo.pkthdr==outptr) pktinfo.pkthdr=0;
+            if (pktinfo.pkthdr>0) pktinfo.pkthdr-=outptr;
             outptr=0;
         }
     }
@@ -540,6 +542,7 @@ uchar *cPaketQueue::GetPacket(int *Size, int Type)
     else
     {
         scannerstart=pkthdr+pktsyncsize;
+        if (pktsyncsize>4) scanner=0xFFFFFFFF;
     }
 
     uchar *ptr=&buffer[pktinfo.pkthdr];
@@ -969,7 +972,7 @@ void cDemux::Clear()
     if (ts2pkt_apid) ts2pkt_apid->Clear();
 
     if (queue) queue->Clear();
-    offset=0;
+    offset=rawoffset=0;
     vdroffset=0;
     last_bplen=0;
     from_oldfile=0;
@@ -1266,6 +1269,7 @@ int cDemux::Process(uchar *Data, int Count, AvPacket *pkt)
         bpkt=queue->Get(&bplen);
         if (!bpkt) return -1;
         last_bplen=bplen;
+        rawoffset+=bplen;
         if ((vdrcount) && (TS)) vdraddpatpmt(bpkt,bplen);
     }
 
@@ -1334,7 +1338,7 @@ int cDemux::Process(uchar *Data, int Count, AvPacket *pkt)
             break;
         }
     }
-    if (TS)
+    else
     {
         if (stream_or_pid==vpid)
         {
