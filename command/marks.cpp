@@ -735,5 +735,6 @@ bool clMarks::Save(const char *Directory, double FrameRate, bool isTS, bool Forc
         }
     }
     free(fpath);
+    savedcount=count;
     return true;
 }
