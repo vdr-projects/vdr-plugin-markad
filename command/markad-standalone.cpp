@@ -1646,8 +1646,15 @@ bool cMarkAdStandalone::LoadInfo()
             if (pbstart) {
                 pbstart+=8;
                 bstart=atoi(pbstart);
-                if ((bstart>3600) || (bstart<0)) bstart=0;
+            } else {
+                pbstart=strstr(line,"<start>");
+                if (pbstart && startTime) {
+                    pbstart+=7;
+                    bstart=atoi(pbstart);
+                    bstart=startTime-bstart;
+                }
             }
+                if ((bstart>3600) || (bstart<0)) bstart=0;		                
         }
         if (line[0]=='F')
         {
