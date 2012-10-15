@@ -1513,6 +1513,7 @@ time_t cMarkAdStandalone::GetBroadcastStart(time_t start, int bstart, int fd)
 
     // try to get from mtime
     // (and hope info.vdr has not changed after the start of the recording)
+    /*
     if (fstat(fd,&statbuf)!=-1)
     {
         if (fabs(difftime(start,statbuf.st_mtime))<1800)
@@ -1521,8 +1522,9 @@ time_t cMarkAdStandalone::GetBroadcastStart(time_t start, int bstart, int fd)
             return (time_t) statbuf.st_mtime;
         }
     }
+    */
 
-    // fallback to the directory -> worst starttime we can use!
+    // fallback to the directory
     const char *timestr=strrchr(directory,'/');
     if (timestr)
     {
@@ -1539,7 +1541,7 @@ time_t cMarkAdStandalone::GetBroadcastStart(time_t start, int bstart, int fd)
                 t.tm_mon--;
                 t.tm_sec=0;
                 t.tm_isdst=-1;
-                isyslog("getting broadcast start from directory (can be wrong)");
+                isyslog("getting broadcast start from directory");
                 time_t e=mktime(&t);
                 e-=(time_t) bstart;
                 return e;
@@ -1654,7 +1656,7 @@ bool cMarkAdStandalone::LoadInfo()
                     bstart=startTime-bstart;
                 }
             }
-                if ((bstart>3600) || (bstart<0)) bstart=0;		                
+            if ((bstart>3600) || (bstart<0)) bstart=0;
         }
         if (line[0]=='F')
         {

@@ -686,10 +686,16 @@ bool cTS2Pkt::Process(uchar *TSData, int TSSize, AvPacket *Pkt)
             return true;
         }
 
-        if ((tshdr->TError) && (lasterror!=ERR_HDRBIT))
+        if (tshdr->TError)
         {
-            lasterror=ERR_HDRBIT;
-            esyslog("stream error bit set (0x%04x)",pid);
+            if (lasterror!=ERR_HDRBIT) {
+                lasterror=ERR_HDRBIT;
+                esyslog("stream error bit set (0x%04x)",pid);
+            }
+            Clear(Pkt);
+            skipped+=queue->Skipped();
+            skipped+=TS_SIZE;
+            return true;
         }
 
         int buflen=TS_SIZE+1;
