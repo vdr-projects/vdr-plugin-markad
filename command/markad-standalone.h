@@ -221,7 +221,7 @@ unsigned Descriptor_Length:
     int skipped;       // skipped bytes in whole file
     bool inBroadCast;  // are we in a broadcast (or ad)?
 
-    time_t GetBroadcastStart(time_t start, int bstart, int fd);
+    time_t GetBroadcastStart(time_t start, int fd);
     void CheckIndexGrowing();
     char *indexFile;
     int sleepcnt;

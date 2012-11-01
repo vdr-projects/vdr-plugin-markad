@@ -820,14 +820,7 @@ bool cMarkAdStandalone::ProcessFile2ndPass(clMark **Mark1, clMark **Mark2,int Nu
                                 if (macontext.Video.Info.Pict_Type==MA_I_TYPE)
                                 {
                                     lastiframe=iframe;
-                                    if (macontext.Info.VPid.Type==MARKAD_PIDTYPE_VIDEO_H264)
-                                    {
-                                        iframe=actframe;
-                                    }
-                                    else
-                                    {
-                                        iframe=actframe-1;
-                                    }
+                                    iframe=actframe-1;
                                     dRes=true;
                                 }
                             }
@@ -1472,7 +1465,7 @@ bool cMarkAdStandalone::SaveInfo()
     return (err==false);
 }
 
-time_t cMarkAdStandalone::GetBroadcastStart(time_t start, int bstart, int fd)
+time_t cMarkAdStandalone::GetBroadcastStart(time_t start, int fd)
 {
     // get broadcast start from atime of directory (if the volume is mounted with noatime)
     struct mntent *ent;
@@ -1504,7 +1497,7 @@ time_t cMarkAdStandalone::GetBroadcastStart(time_t start, int bstart, int fd)
 
     if ((useatime) && (stat(directory,&statbuf)!=-1))
     {
-        if (fabs(difftime(start,statbuf.st_atime))<1800)
+        if (fabs(difftime(start,statbuf.st_atime))<7200)
         {
             isyslog("getting broadcast start from directory atime");
             return statbuf.st_atime;
@@ -1513,16 +1506,14 @@ time_t cMarkAdStandalone::GetBroadcastStart(time_t start, int bstart, int fd)
 
     // try to get from mtime
     // (and hope info.vdr has not changed after the start of the recording)
-    /*
     if (fstat(fd,&statbuf)!=-1)
     {
-        if (fabs(difftime(start,statbuf.st_mtime))<1800)
+        if (fabs(difftime(start,statbuf.st_mtime))<7200)
         {
             isyslog("getting broadcast start from info mtime");
             return (time_t) statbuf.st_mtime;
         }
     }
-    */
 
     // fallback to the directory
     const char *timestr=strrchr(directory,'/');
@@ -1541,10 +1532,8 @@ time_t cMarkAdStandalone::GetBroadcastStart(time_t start, int bstart, int fd)
                 t.tm_mon--;
                 t.tm_sec=0;
                 t.tm_isdst=-1;
-                isyslog("getting broadcast start from directory");
-                time_t e=mktime(&t);
-                e-=(time_t) bstart;
-                return e;
+                isyslog("getting broadcast start from directory (can be wrong!)");
+                return mktime(&t);
             }
         }
     }
@@ -1595,7 +1584,6 @@ bool cMarkAdStandalone::LoadInfo()
 
     char *line=NULL;
     size_t linelen;
-    int bstart=0;
     while (getline(&line,&linelen,f)!=-1)
     {
         if (line[0]=='C')
@@ -1640,23 +1628,6 @@ bool cMarkAdStandalone::LoadInfo()
                 char *cr=strchr(title,13);
                 if (cr) *cr=0;
             }
-        }
-        if (line[0]=='@')
-        {
-            /* if we have an epgsearch line, we can assume the prestart time */
-            char *pbstart=strstr(line,"<bstart>");
-            if (pbstart) {
-                pbstart+=8;
-                bstart=atoi(pbstart);
-            } else {
-                pbstart=strstr(line,"<start>");
-                if (pbstart && startTime) {
-                    pbstart+=7;
-                    bstart=atoi(pbstart);
-                    bstart=startTime-bstart;
-                }
-            }
-            if ((bstart>3600) || (bstart<0)) bstart=0;
         }
         if (line[0]=='F')
         {
@@ -1719,7 +1690,7 @@ bool cMarkAdStandalone::LoadInfo()
 
     if ((length) && (!bIgnoreTimerInfo) && (startTime))
     {
-        time_t rStart=GetBroadcastStart(startTime,bstart,fileno(f));
+        time_t rStart=GetBroadcastStart(startTime, fileno(f));
         if (rStart)
         {
             tStart=(int) (startTime-rStart);
