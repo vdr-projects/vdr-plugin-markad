@@ -769,11 +769,12 @@ MarkAdPos *cMarkAdOverlap::Detect()
     return &result;
 }
 
-MarkAdPos *cMarkAdOverlap::Process(int FrameNumber, int Frames, bool BeforeAd)
+MarkAdPos *cMarkAdOverlap::Process(int FrameNumber, int Frames, bool BeforeAd, bool H264)
 {
     if ((lastframenumber>0) && (!similarMaxCnt))
     {
         similarCutOff=50000; // lower is harder!
+        if (H264) similarCutOff*=6;
         similarMaxCnt=4;
     }
 
@@ -897,13 +898,13 @@ bool cMarkAdVideo::aspectratiochange(MarkAdAspectRatio &a, MarkAdAspectRatio &b,
 
 }
 
-MarkAdPos *cMarkAdVideo::ProcessOverlap(int FrameNumber, int Frames, bool BeforeAd)
+MarkAdPos *cMarkAdVideo::ProcessOverlap(int FrameNumber, int Frames, bool BeforeAd, bool H264)
 {
     if (!FrameNumber) return NULL;
     if (!overlap) overlap=new cMarkAdOverlap(macontext);
     if (!overlap) return NULL;
 
-    return overlap->Process(FrameNumber, Frames, BeforeAd);
+    return overlap->Process(FrameNumber, Frames, BeforeAd, H264);
 }
 
 MarkAdMarks *cMarkAdVideo::Process(int FrameNumber, int FrameNumberNext)

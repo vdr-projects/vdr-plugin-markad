@@ -82,7 +82,7 @@ private:
 public:
     cMarkAdOverlap(MarkAdContext *maContext);
     ~cMarkAdOverlap();
-    MarkAdPos *Process(int FrameNumber, int Frames, bool BeforeAd);
+    MarkAdPos *Process(int FrameNumber, int Frames, bool BeforeAd, bool H264);
 };
 
 class cMarkAdLogo
@@ -213,7 +213,7 @@ private:
 public:
     cMarkAdVideo(MarkAdContext *maContext);
     ~cMarkAdVideo();
-    MarkAdPos *ProcessOverlap(int FrameNumber, int Frames, bool BeforeAd);
+    MarkAdPos *ProcessOverlap(int FrameNumber, int Frames, bool BeforeAd, bool H264);
     MarkAdMarks *Process(int FrameNumber, int FrameNumberNext);
     void Clear();
 };

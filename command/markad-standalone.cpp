@@ -829,7 +829,8 @@ bool cMarkAdStandalone::ProcessFile2ndPass(clMark **Mark1, clMark **Mark2,int Nu
                             {
                                 if (pframe!=lastiframe)
                                 {
-                                    if (pn>mSTART) pos=video->ProcessOverlap(lastiframe,Frames,(pn==mBEFORE));
+                                    if (pn>mSTART) pos=video->ProcessOverlap(lastiframe,Frames,(pn==mBEFORE),
+							   (macontext.Info.VPid.Type==MARKAD_PIDTYPE_VIDEO_H264));
                                     framecounter++;
                                 }
                                 if ((pos) && (pn==mAFTER))
