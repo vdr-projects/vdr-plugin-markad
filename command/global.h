@@ -67,6 +67,7 @@ typedef struct config
     int ignoreInfo;
     int svdrpport;
     int threads;
+    int astopoffs;
 
     bool DecodeVideo;
     bool DecodeAudio;

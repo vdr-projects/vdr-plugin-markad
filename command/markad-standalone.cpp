@@ -234,9 +234,11 @@ void cMarkAdStandalone::CalculateCheckPositions(int startframe)
 
     int delta=macontext.Video.Info.FramesPerSecond*MAXRANGE;
     int len_in_frames=macontext.Video.Info.FramesPerSecond*length;
+    int len_in_framesA=macontext.Video.Info.FramesPerSecond*(length+macontext.Config->astopoffs);
 
     iStart=-startframe;
     iStop=-(startframe+len_in_frames);
+    iStopA=-(startframe+len_in_framesA);
     chkSTART=-iStart+delta;
     chkSTOP=-iStop+(3*delta);
 }
@@ -259,7 +261,7 @@ void cMarkAdStandalone::CheckStop()
         {
             MarkAdMark mark;
             memset(&mark,0,sizeof(mark));
-            mark.Position=iStop;
+            mark.Position=iStopA;
             mark.Type=MT_ASSUMEDSTOP;
             AddMark(&mark);
         }
@@ -830,7 +832,7 @@ bool cMarkAdStandalone::ProcessFile2ndPass(clMark **Mark1, clMark **Mark2,int Nu
                                 if (pframe!=lastiframe)
                                 {
                                     if (pn>mSTART) pos=video->ProcessOverlap(lastiframe,Frames,(pn==mBEFORE),
-							   (macontext.Info.VPid.Type==MARKAD_PIDTYPE_VIDEO_H264));
+                                                           (macontext.Info.VPid.Type==MARKAD_PIDTYPE_VIDEO_H264));
                                     framecounter++;
                                 }
                                 if ((pos) && (pn==mAFTER))
@@ -1039,6 +1041,10 @@ bool cMarkAdStandalone::ProcessFile(int Number)
                                         iStop=lastiframe;
                                         iStopinBroadCast=inBroadCast;
                                     }
+                                    if ((iStopA<0) && (lastiframe>-iStopA))
+                                    {
+                                        iStopA=lastiframe;
+                                    }
                                     iframe=framecnt-1;
                                     dRes=true;
                                 }
@@ -1062,7 +1068,7 @@ bool cMarkAdStandalone::ProcessFile(int Number)
                                     {
                                         if ((inBroadCast) && (lastiframe>chkSTART)) CheckStart();
                                     }
-                                    if (iStop>0)
+                                    if ((iStop>0) && (iStopA>0))
                                     {
                                         if (lastiframe>chkSTOP) CheckStop();
                                     }
@@ -1161,7 +1167,7 @@ void cMarkAdStandalone::ProcessFile()
     if (!abort)
     {
         CheckLogoMarks();
-        if (iStop>0) CheckStop(); // no stopmark till now?
+        if ((iStop>0) && (iStopA>0)) CheckStop(); // no stopmark till now?
         if ((inBroadCast) && (!gotendmark) && (lastiframe))
         {
             MarkAdMark tempmark;
@@ -2094,7 +2100,7 @@ cMarkAdStandalone::cMarkAdStandalone(const char *Directory, const MarkAdConfig *
     bDecodeVideo=config->DecodeVideo;
     bDecodeAudio=config->DecodeAudio;
 
-    tStart=iStart=iStop=0;
+    tStart=iStart=iStop=iStopA=0;
 
     if ((config->ignoreInfo & IGNORE_TIMERINFO)==IGNORE_TIMERINFO)
     {
@@ -2219,7 +2225,7 @@ cMarkAdStandalone::cMarkAdStandalone(const char *Directory, const MarkAdConfig *
             esyslog("failed loading info - logo %s%sdisabled",
                     (config->logoExtraction!=-1) ? "extraction" : "detection",
                     bIgnoreTimerInfo ? " " : " and pre-/post-timer ");
-            tStart=iStart=iStop=0;
+            tStart=iStart=iStop=iStopA=0;
             macontext.Video.Options.IgnoreLogoDetection=true;
             macontext.Video.Options.WeakMarksOk=true;
         }
@@ -2240,7 +2246,10 @@ cMarkAdStandalone::cMarkAdStandalone(const char *Directory, const MarkAdConfig *
         inBroadCast=true;
     }
 
-    if (tStart>1) isyslog("pre-timer %im",tStart/60);
+    if (tStart>1) {
+        if (tStart<60) tStart=60;
+        isyslog("pre-timer %im",tStart/60);
+    }
     if (length) isyslog("broadcast length %im",length/60);
 
     if (title[0])
@@ -2447,6 +2456,8 @@ int usage(int svdrpport)
            "                  ip/hostname of a remote VDR for OSD messages\n"
            "                --svdrpport=<port> (default is %i)\n"
            "                  port of a remote VDR for OSD messages\n"
+           "                --astopoffs=<value> (default is 100)\n"
+           "                  assumed stop offset in seconds range from 0 to 240\n"
            "\ncmd: one of\n"
            "-                            dummy-parameter if called directly\n"
            "after                        markad starts to analyze the recording\n"
@@ -2534,6 +2545,7 @@ int main(int argc, char *argv[])
     config.logoWidth=-1;
     config.logoHeight=-1;
     config.threads=-1;
+    config.astopoffs=100;
     strcpy(config.svdrphost,"127.0.0.1");
     strcpy(config.logoDirectory,"/var/lib/markad");
 
@@ -2570,6 +2582,7 @@ int main(int argc, char *argv[])
             {"verbose", 0, 0, 'v'},
 
             {"asd",0,0,6},
+            {"astopoffs",1,0,12},
             {"loglevel",1,0,2},
             {"markfile",1,0,1},
             {"nopid",0,0,5},
@@ -2879,6 +2892,19 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "markad: you cannot use --pass1only with --pass2only\n");
                 return 2;
             }
+            break;
+
+        case 12: // --astopoffs
+            if (isnumber(optarg) && atoi(optarg) >= 0 && atoi(optarg) <= 240)
+            {
+                config.svdrpport=atoi(optarg);
+            }
+            else
+            {
+                fprintf(stderr, "markad: invalid astopoffs value: %s\n", optarg);
+                return 2;
+            }
+            break;
             break;
 
 
