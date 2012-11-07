@@ -955,16 +955,29 @@ bool cMarkAdStandalone::ProcessFile(int Number)
     char *fbuf;
     if (isTS)
     {
-        if (asprintf(&fbuf,"%s/%05i.ts",directory,Number)==-1) return false;
+        if (asprintf(&fbuf,"%s/%05i.ts",directory,Number)==-1) {
+            esyslog("failed to allocate string, out of memory?");
+            return false;
+        }
     }
     else
     {
-        if (asprintf(&fbuf,"%s/%03i.vdr",directory,Number)==-1) return false;
+        if (asprintf(&fbuf,"%s/%03i.vdr",directory,Number)==-1) {
+            esyslog("failed to allocate string, out of memory?");
+            return false;
+        }
     }
 
     int f=open(fbuf,O_RDONLY);
     free(fbuf);
-    if (f==-1) return false;
+    if (f==-1) {
+        if (isTS) {
+            esyslog("failed to open %05i.ts",Number);
+        } else {
+            esyslog("failed to open %03i.vdr",Number);
+        }
+        return false;
+    }
 
     int dataread;
     dsyslog("processing file %05i",Number);
@@ -972,6 +985,7 @@ bool cMarkAdStandalone::ProcessFile(int Number)
     int pframe=-1;
 
     demux->NewFile();
+again:
     while ((dataread=read(f,data,datalen))>0)
     {
         if (abort) break;
@@ -1116,6 +1130,8 @@ bool cMarkAdStandalone::ProcessFile(int Number)
             return false;
         }
     }
+    if ((dataread==-1) && (errno==EINTR)) goto again; // i know this is ugly ;)
+
     close(f);
     return true;
 }
