@@ -264,14 +264,15 @@ void cMarkAdStandalone::CheckStop()
             mark.Position=iStopA;
             mark.Type=MT_ASSUMEDSTOP;
             AddMark(&mark);
+            marks.DelTill(iStopA,false);
         }
         else
         {
             isyslog("removing marks from position %i, if any",iStop);
+            marks.DelTill(iStop,false);
         }
-        marks.DelTill(iStop,false);
     }
-    iStop=0;
+    iStop=iStopA=0;
     gotendmark=true;
 }
 
