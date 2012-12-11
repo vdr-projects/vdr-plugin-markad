@@ -47,7 +47,7 @@ private:
     void Remove(const char *Name, bool Kill=false);
     void Pause(const char *FileName);
     void Continue(const char *FileName);
-    bool LogoExists(const char *Name);
+    bool LogoExists(const cDevice *Device, const char *FileName);
 protected:
     virtual void Recording(const cDevice *Device, const char *Name, const char *FileName, bool On);
     virtual void Replaying(const cControl *Control, const char *Name, const char *FileName, bool On);

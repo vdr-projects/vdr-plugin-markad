@@ -136,20 +136,21 @@ void cStatusMarkAd::TimerChange(const cTimer *Timer, eTimerChange Change)
     Remove(Timer->File(),true);
 }
 
-bool cStatusMarkAd::LogoExists(const char *Name)
+bool cStatusMarkAd::LogoExists(const cDevice *Device,const char *FileName)
 {
-    if (!Name) return false;
+    if (!FileName) return false;
     cTimer *timer=NULL;
     for (cTimer *Timer = Timers.First(); Timer; Timer=Timers.Next(Timer))
     {
-        if (Timer->Recording() && (!strcmp(Timer->ToDescr(),Name)))
+        if (Timer->Recording() && Device->IsTunedToTransponder(Timer->Channel()) &&
+                (difftime(time(NULL),Timer->StartTime())<60))
         {
             timer=Timer;
             break;
         }
     }
     if (!timer) {
-        esyslog("markad: cannot find timer for '%s'",Name);
+        esyslog("markad: cannot find timer for '%s'",FileName);
         return false;
     }
 
@@ -194,7 +195,7 @@ bool cStatusMarkAd::LogoExists(const char *Name)
     return true;
 }
 
-void cStatusMarkAd::Recording(const cDevice *UNUSED(Device), const char *Name,
+void cStatusMarkAd::Recording(const cDevice *Device, const char *Name,
                               const char *FileName, bool On)
 {
     if (!FileName) return; // we cannot operate without a filename
@@ -203,7 +204,7 @@ void cStatusMarkAd::Recording(const cDevice *UNUSED(Device), const char *Name,
 
     if (On)
     {
-        if (setup->LogoOnly && !LogoExists(Name)) {
+        if (setup->LogoOnly && !LogoExists(Device,FileName)) {
             dsyslog("markad: no logo found for %s",Name);
             return;
         }
@@ -305,8 +306,13 @@ bool cStatusMarkAd::GetNextActive(struct recs **RecEntry)
         {
             if (getStatus(actpos))
             {
-                *RecEntry=&recs[actpos++];
-                return true;
+                /* check if recording directory still exists */
+                if (access(recs[actpos].FileName,R_OK)==-1) {
+                    Remove(actpos,true);
+                } else {
+                    *RecEntry=&recs[actpos++];
+                    return true;
+                }
             }
         }
         actpos++;
@@ -362,10 +368,12 @@ void cStatusMarkAd::Remove(int Position, bool Kill)
         {
             if ((recs[Position].Status=='R') || (recs[Position].Status=='S'))
             {
+                dsyslog("markad: terminating pid %i",recs[Position].Pid);
                 kill(recs[Position].Pid,SIGTERM);
             }
             else
             {
+                dsyslog("markad: killing pid %i",recs[Position].Pid);
                 kill(recs[Position].Pid,SIGKILL);
             }
         }
@@ -408,6 +416,7 @@ void cStatusMarkAd::Pause(const char *FileName)
             if ((recs[i].FileName) && (!strcmp(recs[i].FileName,FileName)) &&
                     (recs[i].Pid) && (!recs[i].ChangedbyUser))
             {
+                dsyslog("markad: pausing pid %i",recs[i].Pid);
                 kill(recs[i].Pid,SIGTSTP);
             }
         }
@@ -415,6 +424,7 @@ void cStatusMarkAd::Pause(const char *FileName)
         {
             if ((recs[i].Pid) && (!recs[i].ChangedbyUser))
             {
+                dsyslog("markad: pausing pid %i",recs[i].Pid);
                 kill(recs[i].Pid,SIGTSTP);
             }
         }
@@ -430,6 +440,7 @@ void cStatusMarkAd::Continue(const char *FileName)
             if ((recs[i].FileName) && (!strcmp(recs[i].FileName,FileName)) &&
                     (recs[i].Pid) && (!recs[i].ChangedbyUser) )
             {
+                dsyslog("markad: resume pid %i",recs[i].Pid);
                 kill(recs[i].Pid,SIGCONT);
             }
         }
@@ -437,6 +448,7 @@ void cStatusMarkAd::Continue(const char *FileName)
         {
             if ((recs[i].Pid) && (!recs[i].ChangedbyUser))
             {
+                dsyslog("markad: resume pid %i",recs[i].Pid);
                 kill(recs[i].Pid,SIGCONT);
             }
         }
