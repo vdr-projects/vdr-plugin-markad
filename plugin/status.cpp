@@ -142,12 +142,21 @@ bool cStatusMarkAd::LogoExists(const cDevice *Device,const char *FileName)
     cTimer *timer=NULL;
     for (cTimer *Timer = Timers.First(); Timer; Timer=Timers.Next(Timer))
     {
+#if APIVERSNUM>=107220
+        if (Timer->Recording() && const_cast<cDevice *>(Device)->IsTunedToTransponder(Timer->Channel()) &&
+                (difftime(time(NULL),Timer->StartTime())<60))
+        {
+            timer=Timer;
+            break;
+        }
+#else
         if (Timer->Recording() && Device->IsTunedToTransponder(Timer->Channel()) &&
                 (difftime(time(NULL),Timer->StartTime())<60))
         {
             timer=Timer;
             break;
         }
+#endif
     }
     if (!timer) {
         esyslog("markad: cannot find timer for '%s'",FileName);
