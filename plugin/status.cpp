@@ -142,7 +142,7 @@ bool cStatusMarkAd::LogoExists(const cDevice *Device,const char *FileName)
     cTimer *timer=NULL;
     for (cTimer *Timer = Timers.First(); Timer; Timer=Timers.Next(Timer))
     {
-#if APIVERSNUM>=107220
+#if APIVERSNUM>=10722
         if (Timer->Recording() && const_cast<cDevice *>(Device)->IsTunedToTransponder(Timer->Channel()) &&
                 (difftime(time(NULL),Timer->StartTime())<60))
         {
