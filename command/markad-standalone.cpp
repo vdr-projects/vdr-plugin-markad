@@ -620,13 +620,19 @@ void cMarkAdStandalone::CheckIndexGrowing()
 
     if (!indexFile) return;
     if (macontext.Config->logoExtraction!=-1) return;
-    if (sleepcnt>=2) return; // we already slept too much
+    if (sleepcnt>=2) {
+        dsyslog("slept too much");
+        return; // we already slept too much
+    }
 
     bool notenough=true;
     do
     {
         struct stat statbuf;
-        if (stat(indexFile,&statbuf)==-1) return;
+        if (stat(indexFile,&statbuf)==-1) {
+            esyslog("failed to stat %s",indexFile);
+            return;
+        }
 
         int maxframes=statbuf.st_size/8;
         if (maxframes<(framecnt+200))
@@ -638,6 +644,7 @@ void cMarkAdStandalone::CheckIndexGrowing()
                     if (time(NULL)>(startTime+(time_t) length))
                     {
                         // "old" recording
+                        dsyslog("assuming old recording, now>startTime+length");
                         return;
                     }
                     else
@@ -650,13 +657,30 @@ void cMarkAdStandalone::CheckIndexGrowing()
                 else
                 {
                     // "old" recording
+                    dsyslog("assuming old recording - no length and startTime");
                     return;
                 }
             }
             marks.Save(directory,macontext.Video.Info.FramesPerSecond,isTS);
-            sleep(WAITTIME); // now we sleep and hopefully the index will grow
-            waittime+=WAITTIME;
-            if (errno==EINTR) return;
+            unsigned int sleeptime=WAITTIME;
+            time_t sleepstart=time(NULL);
+            double slepttime=0;
+            while ((unsigned int)slepttime<sleeptime) {
+                while (sleeptime>0) {
+                    errno=0;
+                    unsigned int ret=sleep(sleeptime); // now we sleep and hopefully the index will grow
+                    if ((errno) && (ret)) {
+                        esyslog("got errno %i while waiting for new data",errno);
+                        if (errno!=EINTR) return;
+                    }
+                    sleeptime=ret;
+                }
+                slepttime=difftime(time(NULL),sleepstart);
+                if (slepttime<WAITTIME) {
+                    esyslog("what's wrong with your system? we just slept %.0fs",slepttime);
+                }
+            }
+            waittime+=(int) slepttime;
             sleepcnt++;
             if (sleepcnt>=2)
             {
@@ -670,6 +694,8 @@ void cMarkAdStandalone::CheckIndexGrowing()
             if (iwaittime)
             {
                 esyslog("resuming after %is of interrupted recording, marks can be wrong now!",iwaittime);
+            } else {
+                tsyslog("we have enough frames (%i)",maxframes-framecnt);
             }
             iwaittime=0;
             sleepcnt=0;
@@ -2914,7 +2940,7 @@ int main(int argc, char *argv[])
         case 12: // --astopoffs
             if (isnumber(optarg) && atoi(optarg) >= 0 && atoi(optarg) <= 240)
             {
-                config.svdrpport=atoi(optarg);
+                config.astopoffs=atoi(optarg);
             }
             else
             {
@@ -2922,8 +2948,6 @@ int main(int argc, char *argv[])
                 return 2;
             }
             break;
-            break;
-
 
         default:
             printf ("? getopt returned character code 0%o ? (option_index %d)\n", c,option_index);

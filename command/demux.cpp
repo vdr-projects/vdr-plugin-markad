@@ -1352,7 +1352,7 @@ int cDemux::Process(uchar *Data, int Count, AvPacket *pkt)
             {
                 if (h264)
                 {
-                    ts2pkt_vpid=new cTS2Pkt(vpid,"TS2H264",524288,true);
+                    ts2pkt_vpid=new cTS2Pkt(vpid,"TS2H264",589824,true);
                 }
                 else
                 {
@@ -1370,7 +1370,7 @@ int cDemux::Process(uchar *Data, int Count, AvPacket *pkt)
                     ts2pkt_vpid->Resize(3*tpkt.Length,"TS2PES");
                     if (h264)
                     {
-                        pes2videoes=new cPES2ES(PACKET_H264,"PES2H264ES",524288);
+                        pes2videoes=new cPES2ES(PACKET_H264,"PES2H264ES",589824);
                     }
                     else
                     {
