@@ -27,6 +27,7 @@ cSetupMarkAd::cSetupMarkAd(struct setup *Setup)
 
     processTexts[0]=tr("after");
     processTexts[1]=tr("during");
+    processTexts[2]=tr("never");
 
     lpos=0;
 
@@ -37,33 +38,37 @@ void cSetupMarkAd::write(void)
 {
     int current=Current();
     Clear();
-    cMenuEditStraItem *first=new cMenuEditStraItem(tr("execution"),&processduring,2,processTexts);
+    cMenuEditStraItem *first=new cMenuEditStraItem(tr("execution"),&processduring,3,processTexts);
     if (!first) return;
     Add(first);
-    if (!processduring)
-    {
-        Add(new cMenuEditBoolItem(tr("  during another recording"),&whilerecording));
-        Add(new cMenuEditBoolItem(tr("  while replaying"),&whilereplaying));
-    }
-    Add(new cMenuEditBoolItem(tr("scan only channels with logo"),&logoonly),true);
-    lpos=Current();
-    Add(new cMenuEditBoolItem(tr("deferred shutdown"),&deferredshutdown));
-    Add(new cMenuEditBoolItem(tr("ignore timer margins"),&nomargins));
-    Add(new cMenuEditBoolItem(tr("detect overlaps"),&secondpass));
-    Add(new cMenuEditBoolItem(tr("recreate index"),&genindex));
-    Add(new cMenuEditBoolItem(tr("correct info file"),&saveinfo));
-    Add(new cMenuEditBoolItem(tr("OSD message"),&osdmsg));
-    Add(new cMenuEditBoolItem(tr("verbose logging"),&verbose));
-    Add(new cMenuEditBoolItem(tr("log to recording directory"),&log2rec));
-    Add(new cMenuEditBoolItem(tr("hide mainmenu entry"),&hidemainmenuentry));
+    if (processduring!=2) {
+        if (!processduring)
+        {
+            Add(new cMenuEditBoolItem(tr("  during another recording"),&whilerecording));
+            Add(new cMenuEditBoolItem(tr("  while replaying"),&whilereplaying));
+        }
+        Add(new cMenuEditBoolItem(tr("scan only channels with logo"),&logoonly),true);
+        lpos=Current();
+        Add(new cMenuEditBoolItem(tr("deferred shutdown"),&deferredshutdown));
+        Add(new cMenuEditBoolItem(tr("ignore timer margins"),&nomargins));
+        Add(new cMenuEditBoolItem(tr("detect overlaps"),&secondpass));
+        Add(new cMenuEditBoolItem(tr("recreate index"),&genindex));
+        Add(new cMenuEditBoolItem(tr("correct info file"),&saveinfo));
+        Add(new cMenuEditBoolItem(tr("OSD message"),&osdmsg));
+        Add(new cMenuEditBoolItem(tr("verbose logging"),&verbose));
+        Add(new cMenuEditBoolItem(tr("log to recording directory"),&log2rec));
+        Add(new cMenuEditBoolItem(tr("hide mainmenu entry"),&hidemainmenuentry));
 
-    if (current==-1)
-    {
-        SetCurrent(first);
-    }
-    else
-    {
-        SetCurrent(Get(current));
+        if (current==-1)	
+        {
+            SetCurrent(first);
+        }
+        else
+        {
+            SetCurrent(Get(current));
+        }
+    } else {
+      lpos=-1;
     }
     Display();
 }
@@ -122,7 +127,7 @@ void cSetupMarkAd::Store(void)
     SetupStore("SaveInfo",saveinfo);
     SetupStore("DeferredShutdown",deferredshutdown);
 
-    setup->ProcessDuring=(bool) processduring;
+    setup->ProcessDuring=(int) processduring;
     setup->whileRecording=(bool) whilerecording;
     setup->whileReplaying=(bool) whilereplaying;
     setup->OSDMessage=(bool) osdmsg;

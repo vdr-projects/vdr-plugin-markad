@@ -70,9 +70,7 @@ void cStatusMarkAd::Replaying(const cControl *UNUSED(Control), const char *UNUSE
 bool cStatusMarkAd::Start(const char *FileName, const char *Name, const bool Direct)
 {
     if ((Direct) && (Get(FileName)!=-1)) return false;
-    if (setup->OSDMessage) {
 
-    }
     cString cmd = cString::sprintf("\"%s\"/markad %s%s%s%s%s%s%s -l \"%s\" %s \"%s\"",
                                    bindir,
                                    setup->Verbose ? " -v " : "",
@@ -95,7 +93,7 @@ bool cStatusMarkAd::Start(const char *FileName, const char *Name, const bool Dir
         int pos=Add(FileName,Name);
         if (getPid(pos) && getStatus(pos))
         {
-            if (!setup->ProcessDuring)
+            if (setup->ProcessDuring==0)
             {
                 if (!Direct)
                 {
@@ -210,6 +208,11 @@ void cStatusMarkAd::Recording(const cDevice *Device, const char *Name,
     if (!FileName) return; // we cannot operate without a filename
     if (!bindir) return; // we cannot operate without bindir
     if (!logodir) return; // we dont want to operate without logodir
+
+    if (setup->ProcessDuring==2) {
+        dsyslog("markad: deactivated by user");
+        return; // markad deactivated
+    }
 
     if (On)
     {

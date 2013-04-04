@@ -200,6 +200,7 @@ bool cPluginMarkAd::SetupParse(const char *Name, const char *Value)
     else if (!strcasecmp(Name,"Log2Rec")) setup.Log2Rec=atoi(Value);
     else if (!strcasecmp(Name,"LogoOnly")) setup.LogoOnly=atoi(Value);
     else if (!strcasecmp(Name,"SaveInfo")) setup.SaveInfo=atoi(Value);
+    else if (!strcasecmp(Name,"DeferredShutdown")) setup.DeferredShutdown=atoi(Value);
     else return false;
     return true;
 }
