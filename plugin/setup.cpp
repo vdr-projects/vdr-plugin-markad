@@ -59,7 +59,7 @@ void cSetupMarkAd::write(void)
         Add(new cMenuEditBoolItem(tr("log to recording directory"),&log2rec));
         Add(new cMenuEditBoolItem(tr("hide mainmenu entry"),&hidemainmenuentry));
 
-        if (current==-1)	
+        if (current==-1)
         {
             SetCurrent(first);
         }
@@ -68,7 +68,7 @@ void cSetupMarkAd::write(void)
             SetCurrent(Get(current));
         }
     } else {
-      lpos=-1;
+        lpos=-1;
     }
     Display();
 }
@@ -114,6 +114,10 @@ eOSState cSetupMarkAd::ProcessKey(eKeys Key)
 void cSetupMarkAd::Store(void)
 {
     SetupStore("Execution",processduring);
+    if (processduring!=0) {
+        whilerecording=1;
+        whilereplaying=1;
+    }
     SetupStore("whileRecording",whilerecording);
     SetupStore("whileReplaying",whilereplaying);
     SetupStore("IgnoreMargins",nomargins);

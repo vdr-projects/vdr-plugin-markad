@@ -152,7 +152,11 @@ cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
     }
 
     video_codec=NULL;
+#if LIBAVCODEC_VERSION_INT >= ((54<<16)+(51<<8)+100)
+    AVCodecID video_codecid;
+#else
     CodecID video_codecid;
+#endif
 
     if (useH264)
     {
@@ -173,7 +177,11 @@ cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
 
     if (video_codec)
     {
+#if LIBAVCODEC_VERSION_INT >= ((54<<16)+(51<<8)+100)
+        video_context = avcodec_alloc_context3(NULL);
+#else
         video_context = avcodec_alloc_context();
+#endif
         if (video_context)
         {
             if (video_codec->capabilities & CODEC_CAP_TRUNCATED)
@@ -323,7 +331,11 @@ bool cMarkAdDecoder::Clear()
     {
         avcodec_flush_buffers(video_context);
         AVCodecContext *dest;
+#if LIBAVCODEC_VERSION_INT >= ((54<<16)+(51<<8)+100)
+        dest=avcodec_alloc_context3(NULL);
+#else
         dest=avcodec_alloc_context();
+#endif
         if (dest)
         {
             if (avcodec_copy_context(dest,video_context)!=0) ret=false;

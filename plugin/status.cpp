@@ -56,6 +56,7 @@ bool cStatusMarkAd::Replaying()
 void cStatusMarkAd::Replaying(const cControl *UNUSED(Control), const char *UNUSED(Name),
                               const char *UNUSED(FileName), bool On)
 {
+    if (setup->ProcessDuring!=0) return;
     if (setup->whileReplaying) return;
     if (On)
     {
@@ -130,6 +131,7 @@ void cStatusMarkAd::TimerChange(const cTimer *Timer, eTimerChange Change)
 {
     if (!Timer) return;
     if (Change!=tcDel) return;
+    if (setup->ProcessDuring==2) return;
     if (time(NULL)>=Timer->StopTime()) return; // don't react on normal VDR timer deletion after recording
     Remove(Timer->File(),true);
 }
