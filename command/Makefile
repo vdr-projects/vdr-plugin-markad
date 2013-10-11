@@ -96,7 +96,7 @@ install: install-doc markad $(I18Nmsgs)
 	@cp --remove-destination markad $(DESTDIR)/usr/bin/markad
 	@$(STRIP) $(DESTDIR)/usr/bin/markad
 	@mkdir -p $(DESTDIR)/var/lib/markad
-	@cp -a logos/* $(DESTDIR)/var/lib/markad
+	@cp -u logos/* $(DESTDIR)/var/lib/markad
 	@echo markad installed
 
 clean:
