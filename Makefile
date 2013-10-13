@@ -6,6 +6,7 @@
 
 DIRS = command plugin
 
+$(shell GITVERSION=`git rev-parse --short HEAD`; if [ -n $GITVERSION ]; then sed "s/\";/ ($$GITVERSION)\";/" version.dist > version.h; else cp version.dist version.h; fi)
 VERSION = $(shell grep 'static const char \*VERSION *=' version.h | awk '{ print $$6 }' | sed -e 's/[";]//g')
 
 TMPDIR = /tmp
@@ -40,4 +41,4 @@ dist:
 
 clean:
 	for i in $(DIRS); do make -C $$i clean; done
-	@-rm -f $(PACKAGE).tgz
+	@-rm -f version.h $(PACKAGE).tgz
