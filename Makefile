@@ -6,7 +6,7 @@
 
 DIRS = command plugin
 
-$(shell GITVERSION=`git rev-parse --short HEAD`; if [ -n $GITVERSION ]; then sed "s/\";/ ($$GITVERSION)\";/" version.dist > version.h; else cp version.dist version.h; fi)
+$(shell GITVERSION=`git rev-parse --short HEAD 2> /dev/null`; if [ "$$GITVERSION" ]; then sed "s/\";/ ($$GITVERSION)\";/" version.dist > version.h; else cp version.dist version.h; fi)
 VERSION = $(shell grep 'static const char \*VERSION *=' version.h | awk '{ print $$6 }' | sed -e 's/[";]//g')
 
 TMPDIR = /tmp
@@ -34,7 +34,7 @@ dist:
 	@cp -a command/*.cpp command/*.h command/*.1 command/Makefile $(TMPDIR)/$(ARCHIVE)/command 
 	@cp -u command/logos/*.pgm $(TMPDIR)/$(ARCHIVE)/command/logos
 	@cp -a command/po/*.po $(TMPDIR)/$(ARCHIVE)/command/po
-	@cp -a *.h COPYING HISTORY README INSTALL Makefile $(TMPDIR)/$(ARCHIVE)
+	@cp -a *.dist *.h COPYING HISTORY README INSTALL Makefile $(TMPDIR)/$(ARCHIVE)
 	@tar czf $(PACKAGE).tgz -C $(TMPDIR) $(ARCHIVE)
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
 	@echo Distribution package created as $(PACKAGE).tgz
