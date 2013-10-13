@@ -1352,7 +1352,7 @@ int cDemux::Process(uchar *Data, int Count, AvPacket *pkt)
             {
                 if (h264)
                 {
-                    ts2pkt_vpid=new cTS2Pkt(vpid,"TS2H264",589824,true);
+                    ts2pkt_vpid=new cTS2Pkt(vpid,"TS2H264",819200,true);
                 }
                 else
                 {

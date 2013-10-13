@@ -121,7 +121,7 @@ bool cMarkAdStreamInfo::FindVideoInfos(MarkAdContext *maContext, uchar *pkt, int
     }
     return false;
 }
-#include <stdio.h>
+
 bool cMarkAdStreamInfo::FindH264VideoInfos(MarkAdContext *maContext, uchar *pkt, int len)
 {
     if ((!maContext) || (!pkt) || (!len)) return false;
@@ -139,55 +139,56 @@ bool cMarkAdStreamInfo::FindH264VideoInfos(MarkAdContext *maContext, uchar *pkt,
         }
         else
         {
-            if (maContext->Video.Info.Interlaced)
-            {
-                if (H264.use_field) {
-                    H264.use_field=false;
-                    return true;
-                } else {
-                    H264.use_field=true;
-                }
-            } else {
-                return true;
-            }
-
             /*
-                  if (maContext->Video.Info.Interlaced) {
-                      if (H264.use_field) return true;
+                  if (maContext->Video.Info.Interlaced)
+                  {
+                      if (H264.use_field) {
+                          H264.use_field=false;
+                          return true;
+                      } else {
+                          H264.use_field=true;
+                      }
                   } else {
                       return true;
                   }
             */
+
+            if (maContext->Video.Info.Interlaced) {
+                if (H264.use_field) return true;
+            } else {
+                return true;
+            }
+
         }
     }
-    /*
-        if ((nalu==NAL_SLICE) || (nalu==NAL_IDR_SLICE))
+
+    if ((nalu==NAL_SLICE) || (nalu==NAL_IDR_SLICE))
+    {
+        uint8_t *nal_data=(uint8_t*) alloca(len);
+        if (!nal_data) return false;
+        int nal_len = nalUnescape(nal_data, pkt + 5, len - 5);
+        cBitStream bs(nal_data, nal_len);
+
+        bs.skipUeGolomb(); // first_mb_in_slice
+        bs.skipUeGolomb(); // slice_type
+        bs.skipUeGolomb(); // pic_parameter_set_id
+        if (H264.separate_colour_plane_flag)
         {
-            uint8_t *nal_data=(uint8_t*) alloca(len);
-            if (!nal_data) return false;
-            int nal_len = nalUnescape(nal_data, pkt + 5, len - 5);
-            cBitStream bs(nal_data, nal_len);
+            bs.skipBits(2); // colour_plane_id
+        }
+        bs.skipBits(H264.log2_max_frame_num); // frame_num
 
-            bs.skipUeGolomb(); // first_mb_in_slice
-            bs.skipUeGolomb(); // slice_type
-            bs.skipUeGolomb(); // pic_parameter_set_id
-            if (H264.separate_colour_plane_flag)
+        if (maContext->Video.Info.Interlaced)
+        {
+            if (bs.getBit()) // field_pic_flag
             {
-                bs.skipBits(2); // colour_plane_id
-            }
-            bs.skipBits(H264.log2_max_frame_num); // frame_num
-
-            if (maContext->Video.Info.Interlaced)
-            {
-                if (bs.getBit()) // field_pic_flag
-                {
-                    H264.use_field=bs.getBit(); // bottom_field_flag
-                } else {
-                    H264.use_field=true;
-                }
+                H264.use_field=bs.getBit(); // bottom_field_flag
+            } else {
+                H264.use_field=true;
             }
         }
-    */
+    }
+
     if (nalu==NAL_SPS)
     {
         uint8_t *nal_data=(uint8_t*) alloca(len);

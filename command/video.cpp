@@ -84,7 +84,7 @@ int cMarkAdLogo::Load(const char *directory, char *file, int plane)
     }
 
     int width,height;
-    if (fscanf(pFile, "P5\n#C%1i %3i\n%3d %3d\n255\n#", &area.corner,&area.mpixel[plane],&width,&height)!=4)
+    if (fscanf(pFile, "P5\n#C%1i %4i\n%3d %3d\n255\n#", &area.corner,&area.mpixel[plane],&width,&height)!=4)
     {
         fclose(pFile);
         return -2;
@@ -336,11 +336,13 @@ int cMarkAdLogo::Detect(int framenumber, int *logoframenumber)
     if (extract) return LOGO_NOCHANGE;
     if (!processed) return LOGO_ERROR;
 
+    tsyslog("rp=%5i mp=%5i mpV=%5.f mpI=%5.f i=%3i s=%i",rpixel,mpixel,(mpixel*LOGO_VMARK),(mpixel*LOGO_IMARK),area.intensity,area.status);
+
     if (processed==1)
     {
         // if we only have one plane we are "vulnerable"
         // to very bright pictures, so ignore them...
-        if (area.intensity>100) return LOGO_NOCHANGE;
+        if (area.intensity>180) return LOGO_NOCHANGE;
     }
 
     int ret=LOGO_NOCHANGE;

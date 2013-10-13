@@ -630,7 +630,9 @@ void cMarkAdStandalone::CheckIndexGrowing()
     {
         struct stat statbuf;
         if (stat(indexFile,&statbuf)==-1) {
-            esyslog("failed to stat %s",indexFile);
+            if (!macontext.Config->GenIndex) {
+                esyslog("failed to stat %s",indexFile);
+            }
             return;
         }
 
@@ -694,8 +696,6 @@ void cMarkAdStandalone::CheckIndexGrowing()
             if (iwaittime)
             {
                 esyslog("resuming after %is of interrupted recording, marks can be wrong now!",iwaittime);
-            } else {
-                tsyslog("we have enough frames (%i)",maxframes-framecnt);
             }
             iwaittime=0;
             sleepcnt=0;
@@ -999,9 +999,9 @@ bool cMarkAdStandalone::ProcessFile(int Number)
     free(fbuf);
     if (f==-1) {
         if (isTS) {
-            esyslog("failed to open %05i.ts",Number);
+            dsyslog("failed to open %05i.ts",Number);
         } else {
-            esyslog("failed to open %03i.vdr",Number);
+            dsyslog("failed to open %03i.vdr",Number);
         }
         return false;
     }
