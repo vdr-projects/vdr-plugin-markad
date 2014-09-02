@@ -320,28 +320,29 @@ void cMarkAdStandalone::CheckStart()
     }
 
     macontext.Info.Channels=macontext.Audio.Info.Channels;
-    if (macontext.Info.Channels==6)
-    {
-        isyslog("DolbyDigital5.1 audio detected. logo/border/aspect detection disabled");
-        bDecodeVideo=false;
-        macontext.Video.Options.IgnoreAspectRatio=true;
-        macontext.Video.Options.IgnoreLogoDetection=true;
-        marks.Del(MT_ASPECTSTART);
-        marks.Del(MT_ASPECTSTOP);
-        // start mark must be around istart
-        begin=marks.GetAround(INT_MAX,iStart,MT_CHANNELSTART);
-    }
-    else
-    {
-        if (macontext.Info.DPid.Num)
+    if (macontext.Config->DecodeAudio) {
+        if (macontext.Info.Channels==6)
         {
-            if (macontext.Info.Channels)
-                isyslog("broadcast with %i audio channels, disabling AC3 decoding",macontext.Info.Channels);
-            macontext.Info.DPid.Num=0;
-            demux->DisableDPid();
+            isyslog("DolbyDigital5.1 audio detected. logo/border/aspect detection disabled");
+            bDecodeVideo=false;
+            macontext.Video.Options.IgnoreAspectRatio=true;
+            macontext.Video.Options.IgnoreLogoDetection=true;
+            marks.Del(MT_ASPECTSTART);
+            marks.Del(MT_ASPECTSTOP);
+            // start mark must be around istart
+            begin=marks.GetAround(INT_MAX,iStart,MT_CHANNELSTART);
+        }
+        else
+        {
+            if (macontext.Info.DPid.Num)
+            {
+                if (macontext.Info.Channels)
+                    isyslog("broadcast with %i audio channels, disabling AC3 decoding",macontext.Info.Channels);
+                macontext.Info.DPid.Num=0;
+                demux->DisableDPid();
+            }
         }
     }
-
     if ((macontext.Info.AspectRatio.Num) && ((macontext.Info.AspectRatio.Num!=
             macontext.Video.Info.AspectRatio.Num) || (macontext.Info.AspectRatio.Den!=
                     macontext.Video.Info.AspectRatio.Den)))

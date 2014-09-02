@@ -6,6 +6,7 @@
  */
 
 #include <stdint.h>
+#include <stdio.h>
 #include <sched.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -101,6 +102,19 @@ fail:
 }
 #endif
 
+#ifndef AV_CODEC_ID_H264
+#define AV_CODEC_ID_H264 CODEC_ID_H264
+#endif
+#ifndef AV_CODEC_ID_MPEG2VIDEO
+#define AV_CODEC_ID_MPEG2VIDEO CODEC_ID_MPEG2VIDEO
+#endif
+#ifndef AV_CODEC_ID_MPEG2VIDEO_XVMC
+#define AV_CODEC_ID_MPEG2VIDEO_XVMC CODEC_ID_MPEG2VIDEO_XVMC
+#endif
+#ifndef AV_CODEC_ID_NONE
+#define AV_CODEC_ID_NONE CODEC_ID_NONE
+#endif
+
 cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
 {
 #if LIBAVCODEC_VERSION_INT < ((53<<16)+(7<<8)+1)
@@ -160,18 +174,18 @@ cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
 
     if (useH264)
     {
-        video_codecid=CODEC_ID_H264;
+        video_codecid=AV_CODEC_ID_H264;
     }
     else
     {
-        video_codecid=CODEC_ID_MPEG2VIDEO_XVMC;
+        video_codecid=AV_CODEC_ID_MPEG2VIDEO_XVMC;
     }
 
     video_codec = avcodec_find_decoder(video_codecid);
-    if ((!video_codec) && (video_codecid==CODEC_ID_MPEG2VIDEO_XVMC))
+    if ((!video_codec) && (video_codecid==AV_CODEC_ID_MPEG2VIDEO_XVMC))
     {
         // fallback to MPEG2VIDEO
-        video_codecid=CODEC_ID_MPEG2VIDEO;
+        video_codecid=AV_CODEC_ID_MPEG2VIDEO;
         video_codec=avcodec_find_decoder(video_codecid);
     }
 
@@ -190,7 +204,7 @@ cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
             video_context->flags2|=CODEC_FLAG2_FAST; // really?
             video_context->skip_idct=AVDISCARD_ALL;
 
-            if (video_codecid!=CODEC_ID_H264)
+            if (video_codecid!=AV_CODEC_ID_H264)
             {
                 video_context->skip_frame=AVDISCARD_NONKEY; // just I-frames
             } else {
@@ -208,15 +222,15 @@ cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
 #else
             int ret=avcodec_open(video_context, video_codec);
 #endif
-            if ((ret < 0) && (video_codecid==CODEC_ID_MPEG2VIDEO_XVMC))
+            if ((ret < 0) && (video_codecid==AV_CODEC_ID_MPEG2VIDEO_XVMC))
             {
                 // fallback to MPEG2VIDEO
-                video_codecid=CODEC_ID_MPEG2VIDEO;
+                video_codecid=AV_CODEC_ID_MPEG2VIDEO;
                 video_codec=avcodec_find_decoder(video_codecid);
                 if (video_codec)
                 {
                     video_context->codec_type=AVMEDIA_TYPE_UNKNOWN;
-                    video_context->codec_id=CODEC_ID_NONE;
+                    video_context->codec_id=AV_CODEC_ID_NONE;
                     video_context->codec_tag=0;
                     memset(video_context->codec_name,0,sizeof(video_context->codec_name));
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(5<<8)+0)
@@ -235,13 +249,13 @@ cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
             {
                 switch (video_codecid)
                 {
-                case CODEC_ID_H264:
+                case AV_CODEC_ID_H264:
                     esyslog("could not open codec for H264");
                     break;
-                case CODEC_ID_MPEG2VIDEO_XVMC:
+                case AV_CODEC_ID_MPEG2VIDEO_XVMC:
                     esyslog("could not open codec MPEG2 (XVMC)");
                     break;
-                case CODEC_ID_MPEG2VIDEO:
+                case AV_CODEC_ID_MPEG2VIDEO:
                     esyslog("could not open codec MPEG2");
                     break;
                 default:
@@ -296,13 +310,13 @@ cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
     {
         switch (video_codecid)
         {
-        case CODEC_ID_H264:
+        case AV_CODEC_ID_H264:
             esyslog("codec for H264 not found");
             break;
-        case CODEC_ID_MPEG2VIDEO_XVMC:
+        case AV_CODEC_ID_MPEG2VIDEO_XVMC:
             esyslog("codec for MPEG2 (XVMC) not found");
             break;
-        case CODEC_ID_MPEG2VIDEO:
+        case AV_CODEC_ID_MPEG2VIDEO:
             esyslog("codec for MPEG2 not found");
             break;
         default:
@@ -398,14 +412,14 @@ bool cMarkAdDecoder::DecodeVideo(MarkAdContext *maContext,uchar *pkt, int plen)
     if (!video_frame) return false;
     maContext->Video.Data.Valid=false;
 
-    if (video_context->codec_id==CODEC_ID_H264) {
+    if (video_context->codec_id==AV_CODEC_ID_H264) {
         if (plen>=5) {
             if (((pkt[4] & 0x1F)==9) && (pkt[5]==0x10)) addPkt=true;
         }
         if (!addPkt) return false;
     }
 
-    if (video_context->codec_id==CODEC_ID_MPEG2VIDEO) {
+    if (video_context->codec_id==AV_CODEC_ID_MPEG2VIDEO) {
         if (plen>=5) {
             if (!pkt[0] && !pkt[1] && (pkt[2]==1) && !pkt[3]  && ((pkt[5] & 8)==8)) addPkt=true;
         }
