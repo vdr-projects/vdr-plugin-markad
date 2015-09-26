@@ -102,6 +102,7 @@ fail:
 }
 #endif
 
+#if LIBAVCODEC_VERSION_INT < ((55<<16)+(18<<8)+102)
 #ifndef AV_CODEC_ID_H264
 #define AV_CODEC_ID_H264 CODEC_ID_H264
 #endif
@@ -113,6 +114,7 @@ fail:
 #endif
 #ifndef AV_CODEC_ID_NONE
 #define AV_CODEC_ID_NONE CODEC_ID_NONE
+#endif
 #endif
 
 cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)

@@ -239,7 +239,8 @@ void cMarkAdStandalone::CalculateCheckPositions(int startframe)
     iStart=-startframe;
     iStop=-(startframe+len_in_frames);
     iStopA=-(startframe+len_in_framesA);
-    chkSTART=-iStart+delta;
+    chkSTART=-iStart+(1.1*delta);
+    dsyslog("chkSTART set to %i",chkSTART);
     chkSTOP=-iStop+(3*delta);
 }
 
@@ -321,7 +322,7 @@ void cMarkAdStandalone::CheckStart()
 
     macontext.Info.Channels=macontext.Audio.Info.Channels;
     if (macontext.Config->DecodeAudio) {
-        if (macontext.Info.Channels==6)
+        if ((macontext.Info.Channels==6) && (macontext.Audio.Options.IgnoreDolbyDetection==false))
         {
             isyslog("DolbyDigital5.1 audio detected. logo/border/aspect detection disabled");
             bDecodeVideo=false;
@@ -336,7 +337,7 @@ void cMarkAdStandalone::CheckStart()
         {
             if (macontext.Info.DPid.Num)
             {
-                if (macontext.Info.Channels)
+                if ((macontext.Info.Channels) && (macontext.Audio.Options.IgnoreDolbyDetection==false))
                     isyslog("broadcast with %i audio channels, disabling AC3 decoding",macontext.Info.Channels);
                 macontext.Info.DPid.Num=0;
                 demux->DisableDPid();
@@ -371,6 +372,11 @@ void cMarkAdStandalone::CheckStart()
                 (macontext.Video.Info.AspectRatio.Den==3))
         {
             bDecodeVideo=false;
+            if (macontext.Info.Channels==6) {
+                macontext.Video.Options.IgnoreAspectRatio=false;
+                macontext.Info.DPid.Num=0;
+                demux->DisableDPid();
+            }
             macontext.Video.Options.IgnoreLogoDetection=true;
             marks.Del(MT_CHANNELSTART);
             marks.Del(MT_CHANNELSTOP);
@@ -647,7 +653,7 @@ void cMarkAdStandalone::CheckIndexGrowing()
                     if (time(NULL)>(startTime+(time_t) length))
                     {
                         // "old" recording
-                        dsyslog("assuming old recording, now>startTime+length");
+                        tsyslog("assuming old recording, now>startTime+length");
                         return;
                     }
                     else
@@ -673,6 +679,7 @@ void cMarkAdStandalone::CheckIndexGrowing()
                     errno=0;
                     unsigned int ret=sleep(sleeptime); // now we sleep and hopefully the index will grow
                     if ((errno) && (ret)) {
+                        if (abort) return;
                         esyslog("got errno %i while waiting for new data",errno);
                         if (errno!=EINTR) return;
                     }

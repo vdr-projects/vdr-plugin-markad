@@ -166,6 +166,10 @@ typedef struct MarkAdContext
 
     struct Audio
     {
+        struct Options
+        {
+            bool IgnoreDolbyDetection;
+        } Options;
         struct Info
         {
             int Channels; // number of audio channels
