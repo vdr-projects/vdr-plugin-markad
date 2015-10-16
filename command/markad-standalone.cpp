@@ -524,6 +524,25 @@ void cMarkAdStandalone::AddMark(MarkAdMark *Mark)
 
     if (comment) isyslog("%s",comment);
 
+    if ((Mark->Type==MT_LOGOSTART) && (!iStart) && (Mark->Position<abs(iStop)))
+    {
+        clMark *prev=marks.GetPrev(Mark->Position,MT_LOGOSTOP);
+        if (prev)
+        {
+            int MARKDIFF=(int) (macontext.Video.Info.FramesPerSecond*10);
+            if ((Mark->Position-prev->position)<MARKDIFF)
+            {
+                double distance=(Mark->Position-prev->position)/macontext.Video.Info.FramesPerSecond;
+                isyslog("mark distance too short (%.1fs), deleting %i,%i",distance,
+                        prev->position,Mark->Position);
+                if (!macontext.Video.Options.WeakMarksOk) inBroadCast=false;
+                marks.Del(prev);
+                if (comment) free(comment);
+                return;
+            }
+        }
+    }    
+    
     if (((Mark->Type & 0x0F)==MT_STOP) && (!iStart) && (Mark->Position<abs(iStop)))
     {
         clMark *prev=marks.GetPrev(Mark->Position,(Mark->Type & 0xF0)|MT_START);
@@ -532,7 +551,7 @@ void cMarkAdStandalone::AddMark(MarkAdMark *Mark)
             int MARKDIFF;
             if ((Mark->Type & 0xF0)==MT_LOGOCHANGE)
             {
-                MARKDIFF=(int) (macontext.Video.Info.FramesPerSecond*240);
+                MARKDIFF=(int) (macontext.Video.Info.FramesPerSecond*180);
             }
             else
             {
