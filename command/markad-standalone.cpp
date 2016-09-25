@@ -1014,8 +1014,10 @@ void cMarkAdStandalone::Process2ndPass()
         off_t offset;
         int number,frame,iframes;
         int frange=macontext.Video.Info.FramesPerSecond*120; // 40s + 80s
+	int frange_begin=p1->position-frange; // 120 seconds before first mark
+	if (frange_begin<0) frange_begin=0; // but not before beginning of broadcast
 
-        if (marks.ReadIndex(directory,isTS,p1->position-frange,frange,&number,&offset,&frame,&iframes))
+        if (marks.ReadIndex(directory,isTS,p1->position-frange,frange_begin,&number,&offset,&frame,&iframes))
         {
             if (!ProcessFile2ndPass(&p1,NULL,number,offset,frame,iframes)) break;
 

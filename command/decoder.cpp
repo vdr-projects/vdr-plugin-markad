@@ -234,7 +234,9 @@ cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
                     video_context->codec_type=AVMEDIA_TYPE_UNKNOWN;
                     video_context->codec_id=AV_CODEC_ID_NONE;
                     video_context->codec_tag=0;
+#if (LIBAVCODEC_VERSION_MAJOR < 57)
                     memset(video_context->codec_name,0,sizeof(video_context->codec_name));
+#endif
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(5<<8)+0)
                     video_context->thread_count=threadcount;
                     ret=avcodec_open2(video_context, video_codec, NULL);
@@ -282,7 +284,12 @@ cMarkAdDecoder::cMarkAdDecoder(bool useH264, int Threads)
                 }
 #endif
 
+#if ((LIBAVCODEC_VERSION_MICRO >  100) && (LIBAVCODEC_VERSION_INT < ((55<<16)+(45<<8)+101))) || \
+    ((LIBAVCODEC_VERSION_MICRO <= 100) && (LIBAVCODEC_VERSION_INT < ((55<<16)+(28<<8)+1)))
                 video_frame = avcodec_alloc_frame();
+#else
+                video_frame = av_frame_alloc();
+#endif
                 if (!video_frame)
                 {
                     esyslog("could not allocate frame");
