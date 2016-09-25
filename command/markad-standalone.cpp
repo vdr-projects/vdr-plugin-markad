@@ -1017,7 +1017,7 @@ void cMarkAdStandalone::Process2ndPass()
 	int frange_begin=p1->position-frange; // 120 seconds before first mark
 	if (frange_begin<0) frange_begin=0; // but not before beginning of broadcast
 
-        if (marks.ReadIndex(directory,isTS,p1->position-frange,frange_begin,&number,&offset,&frame,&iframes))
+        if (marks.ReadIndex(directory,isTS,frange_begin,frange,&number,&offset,&frame,&iframes))
         {
             if (!ProcessFile2ndPass(&p1,NULL,number,offset,frame,iframes)) break;
 
