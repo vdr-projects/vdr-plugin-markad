@@ -233,6 +233,7 @@ const char **cPluginMarkAd::SVDRPHelpPages(void)
 
 bool cPluginMarkAd::ReadTitle(const char *Directory)
 {
+    usleep(1000000); // wait 1 second
     memset(&title,0,sizeof(title));
     char *buf;
 #if VDRVERSNUM > 10700

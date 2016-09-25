@@ -87,6 +87,7 @@ bool cStatusMarkAd::Start(const char *FileName, const char *Name, const bool Dir
                                    setup->Log2Rec ? " -R " : "",
                                    logodir,Direct ? "-O after" : "--online=2 before",
                                    FileName);
+    usleep(1000000); // wait 1 second
     if (SystemExec(cmd)!=-1)
     {
         dsyslog("markad: executing %s",*cmd);
