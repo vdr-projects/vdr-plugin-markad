@@ -239,7 +239,8 @@ void cMarkAdStandalone::CalculateCheckPositions(int startframe)
     iStart=-startframe;
     iStop=-(startframe+len_in_frames);
     iStopA=-(startframe+len_in_framesA);
-    chkSTART=-iStart+(1.1*delta);
+    //chkSTART=-iStart+(1.1*delta);
+    chkSTART=-iStart+delta;
     dsyslog("chkSTART set to %i",chkSTART);
     chkSTOP=-iStop+(3*delta);
 }
@@ -339,6 +340,8 @@ void cMarkAdStandalone::CheckStart()
             {
                 if ((macontext.Info.Channels) && (macontext.Audio.Options.IgnoreDolbyDetection==false))
                     isyslog("broadcast with %i audio channels, disabling AC3 decoding",macontext.Info.Channels);
+                if (macontext.Audio.Options.IgnoreDolbyDetection==true)
+                    isyslog("disabling AC3 decoding (from logo)");
                 macontext.Info.DPid.Num=0;
                 demux->DisableDPid();
             }
@@ -399,12 +402,39 @@ void cMarkAdStandalone::CheckStart()
     if (!begin)
     {
         begin=marks.GetAround(macontext.Video.Info.FramesPerSecond*(MAXRANGE*2),iStart,MT_START,0x0F);
+        if (begin) {
+            clMark *begin2=marks.GetAround(macontext.Video.Info.FramesPerSecond*MAXRANGE,begin->position,MT_START,0x0F);
+            if (begin2) {
+                if (begin2->type>begin->type) {
+                    if (begin2->type==MT_ASPECTSTART) {
+                        // special case, only take this mark if aspectratio is 4:3
+                        if ((macontext.Video.Info.AspectRatio.Num==4) &&
+                                (macontext.Video.Info.AspectRatio.Den==3)) {
+                            isyslog("mark on position %i stronger than mark on position %i as start mark",begin2->position,begin->position);
+                            begin=begin2;
+                        }
+                    } else {
+                        isyslog("mark on position %i stronger than mark on position %i as start mark",begin2->position,begin->position);
+                        begin=begin2;
+                    }
+                }
+            }
+        }
     }
     if (begin)
     {
         marks.DelTill(begin->position);
         CalculateCheckPositions(begin->position);
         isyslog("using mark on position %i as start mark",begin->position);
+
+        if ((begin->type==MT_VBORDERSTART) || (begin->type==MT_HBORDERSTART))
+        {
+            isyslog("%s borders, logo detection disabled",(begin->type==MT_HBORDERSTART) ? "horizontal" : "vertical");
+            macontext.Video.Options.IgnoreLogoDetection=true;
+            marks.Del(MT_LOGOSTART);
+            marks.Del(MT_LOGOSTOP);
+        }
+
     }
     else
     {
@@ -524,6 +554,25 @@ void cMarkAdStandalone::AddMark(MarkAdMark *Mark)
 
     if (comment) isyslog("%s",comment);
 
+    clMark *prev=marks.GetLast();
+    if (prev) {
+        if (prev->position==Mark->Position) {
+            if (prev->type>Mark->Type)
+            {
+                isyslog("previous mark (%i) stronger than actual mark on same position, deleting %i",
+                        prev->position, Mark->Position);
+                if (comment) free(comment);
+                return;
+            }
+            else
+            {
+                isyslog("actual mark stronger then previous mark on same position, deleting %i",prev->position);
+                marks.Del(prev);
+            }
+        }
+    }
+
+    /*
     if ((Mark->Type==MT_LOGOSTART) && (!iStart) && (Mark->Position<abs(iStop)))
     {
         clMark *prev=marks.GetPrev(Mark->Position,MT_LOGOSTOP);
@@ -541,8 +590,9 @@ void cMarkAdStandalone::AddMark(MarkAdMark *Mark)
                 return;
             }
         }
-    }    
-    
+    }
+    */
+
     if (((Mark->Type & 0x0F)==MT_STOP) && (!iStart) && (Mark->Position<abs(iStop)))
     {
         clMark *prev=marks.GetPrev(Mark->Position,(Mark->Type & 0xF0)|MT_START);
@@ -570,7 +620,7 @@ void cMarkAdStandalone::AddMark(MarkAdMark *Mark)
         }
     }
 
-    clMark *prev=marks.GetLast();
+    prev=marks.GetLast();
     if (prev)
     {
         if ((prev->type & 0x0F)==(Mark->Type & 0x0F))
@@ -695,7 +745,6 @@ void cMarkAdStandalone::CheckIndexGrowing()
             double slepttime=0;
             while ((unsigned int)slepttime<sleeptime) {
                 while (sleeptime>0) {
-                    errno=0;
                     unsigned int ret=sleep(sleeptime); // now we sleep and hopefully the index will grow
                     if ((errno) && (ret)) {
                         if (abort) return;

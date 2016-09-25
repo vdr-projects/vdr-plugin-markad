@@ -46,7 +46,7 @@ enum
     VBORDER_VISIBLE=1
 };
 
-#define MINSECS 240
+#define MINBORDERSECS 60
 
 enum
 {

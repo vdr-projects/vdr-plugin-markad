@@ -338,7 +338,7 @@ int cMarkAdLogo::Detect(int framenumber, int *logoframenumber)
     if (extract) return LOGO_NOCHANGE;
     if (!processed) return LOGO_ERROR;
 
-    tsyslog("rp=%5i mp=%5i mpV=%5.f mpI=%5.f i=%3i s=%i",rpixel,mpixel,(mpixel*LOGO_VMARK),(mpixel*LOGO_IMARK),area.intensity,area.status);
+    //tsyslog("rp=%5i mp=%5i mpV=%5.f mpI=%5.f i=%3i s=%i",rpixel,mpixel,(mpixel*LOGO_VMARK),(mpixel*LOGO_IMARK),area.intensity,area.status);
 
     if (processed==1)
     {
@@ -547,7 +547,7 @@ int cMarkAdBlackBordersHoriz::Process(int FrameNumber, int *BorderIFrame)
             borderframenumber=FrameNumber;
         } else {
             if (borderstatus!=HBORDER_VISIBLE) {
-                if (FrameNumber>(borderframenumber+macontext->Video.Info.FramesPerSecond*MINSECS))
+                if (FrameNumber>(borderframenumber+macontext->Video.Info.FramesPerSecond*MINBORDERSECS))
                 {
                     *BorderIFrame=borderframenumber;
                     borderstatus=HBORDER_VISIBLE;
@@ -586,6 +586,7 @@ int cMarkAdBlackBordersVert::Process(int FrameNumber, int *BorderIFrame)
 #define CHECKWIDTH 32
 #define BRIGHTNESS 20
 #define HOFFSET 50
+#define VOFFSET_ 120
     if (!macontext) return 0;
     if (!macontext->Video.Data.Valid) return 0;
     if (macontext->Video.Info.FramesPerSecond==0) return 0;
@@ -596,8 +597,8 @@ int cMarkAdBlackBordersVert::Process(int FrameNumber, int *BorderIFrame)
     bool fleft=true,fright=true;
     int val=0,cnt=0;
 
-    int end=macontext->Video.Data.PlaneLinesize[0]*macontext->Video.Info.Height;
-    int i=0;
+    int end=macontext->Video.Data.PlaneLinesize[0]*(macontext->Video.Info.Height-VOFFSET_);
+    int i=VOFFSET_*macontext->Video.Data.PlaneLinesize[0];
     while (i<end) {
         for (int x=0; x<CHECKWIDTH; x++)
         {
@@ -611,8 +612,9 @@ int cMarkAdBlackBordersVert::Process(int FrameNumber, int *BorderIFrame)
 
     if (fleft)
     {
-        val=cnt=i=0;
-        int w=macontext->Video.Info.Width-HOFFSET;
+        val=cnt=0;
+        i=VOFFSET_*macontext->Video.Data.PlaneLinesize[0];
+        int w=macontext->Video.Info.Width-HOFFSET-CHECKWIDTH;
         while (i<end) {
             for (int x=0; x<CHECKWIDTH; x++)
             {
@@ -630,7 +632,7 @@ int cMarkAdBlackBordersVert::Process(int FrameNumber, int *BorderIFrame)
             borderframenumber=FrameNumber;
         } else {
             if (borderstatus!=VBORDER_VISIBLE) {
-                if (FrameNumber>(borderframenumber+macontext->Video.Info.FramesPerSecond*MINSECS))
+                if (FrameNumber>(borderframenumber+macontext->Video.Info.FramesPerSecond*MINBORDERSECS))
                 {
                     *BorderIFrame=borderframenumber;
                     borderstatus=VBORDER_VISIBLE;

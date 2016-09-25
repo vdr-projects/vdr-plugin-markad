@@ -22,37 +22,37 @@ typedef unsigned char uchar;
 #define MA_SP_TYPE 6
 #define MA_BI_TYPE 7
 
-#define MT_START          1
-#define MT_STOP           2
+#define MT_START          (unsigned char) 1
+#define MT_STOP           (unsigned char) 2
 
-#define MT_ASSUMED        0x10
-#define MT_ASSUMEDSTART   0x11
-#define MT_ASSUMEDSTOP    0x12
+#define MT_ASSUMED        (unsigned char) 0x10
+#define MT_ASSUMEDSTART   (unsigned char) 0x11
+#define MT_ASSUMEDSTOP    (unsigned char) 0x12
 
-#define MT_LOGOCHANGE     0x20
-#define MT_LOGOSTART      0x21
-#define MT_LOGOSTOP       0x22
+#define MT_LOGOCHANGE     (unsigned char) 0x20
+#define MT_LOGOSTART      (unsigned char) 0x21
+#define MT_LOGOSTOP       (unsigned char) 0x22
 
-#define MT_HBORDERCHANGE  0x30
-#define MT_HBORDERSTART   0x31
-#define MT_HBORDERSTOP    0x32
+#define MT_HBORDERCHANGE  (unsigned char) 0x30
+#define MT_HBORDERSTART   (unsigned char) 0x31
+#define MT_HBORDERSTOP    (unsigned char) 0x32
 
-#define MT_VBORDERCHANGE  0x40
-#define MT_VBORDERSTART   0x41
-#define MT_VBORDERSTOP    0x42
+#define MT_VBORDERCHANGE  (unsigned char) 0x40
+#define MT_VBORDERSTART   (unsigned char) 0x41
+#define MT_VBORDERSTOP    (unsigned char) 0x42
 
-#define MT_ASPECTCHANGE   0x50
-#define MT_ASPECTSTART    0x51
-#define MT_ASPECTSTOP     0x52
+#define MT_ASPECTCHANGE   (unsigned char) 0x50
+#define MT_ASPECTSTART    (unsigned char) 0x51
+#define MT_ASPECTSTOP     (unsigned char) 0x52
 
-#define MT_CHANNELCHANGE  0x60
-#define MT_CHANNELSTART   0x61
-#define MT_CHANNELSTOP    0x62
+#define MT_CHANNELCHANGE  (unsigned char) 0x60
+#define MT_CHANNELSTART   (unsigned char) 0x61
+#define MT_CHANNELSTOP    (unsigned char) 0x62
 
-#define MT_RECORDINGSTART 0xD1
-#define MT_RECORDINGSTOP  0xD2
-#define MT_MOVED          0xE0
-#define MT_ALL            0xFF
+#define MT_RECORDINGSTART (unsigned char) 0xD1
+#define MT_RECORDINGSTOP  (unsigned char) 0xD2
+#define MT_MOVED          (unsigned char) 0xE0
+#define MT_ALL            (unsigned char) 0xFF
 
 typedef struct config
 {

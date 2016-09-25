@@ -17,7 +17,6 @@
 
 #include "marks.h"
 
-
 clMark::clMark(int Type, int Position, const char *Comment)
 {
     type=Type;
