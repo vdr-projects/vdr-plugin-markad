@@ -146,7 +146,11 @@ void cSetupMarkAd::Store(void)
     setup->SaveInfo=saveinfo;
 }
 
+#if APIVERSNUM>=20301
+#define CHNUMWIDTH (numdigits(cChannels::MaxNumber())+1)
+#else
 #define CHNUMWIDTH (numdigits(Channels.MaxNumber())+1)
+#endif
 
 cSetupMarkAdList::cSetupMarkAdList(struct setup *Setup)
         :cOsdMenu("",CHNUMWIDTH)
@@ -168,31 +172,40 @@ cSetupMarkAdList::cSetupMarkAdList(struct setup *Setup)
                 char *m=strchr(name,'-');
                 if (m) *m=0;
 
+#if APIVERSNUM>=20301
+                cStateKey StateKey;
+                if (const cChannels *Channels = cChannels::GetChannelsRead(StateKey)) {
+                    for (const cChannel *channel=Channels->First(); channel; channel=Channels->Next(channel))
+#else
                 for (cChannel *channel = Channels.First(); channel; channel = Channels.Next(channel))
-                {
-                    if (channel->Name())
+#endif
                     {
-                        char *cname=strdup(channel->Name());
-                        if (cname)
+                        if (channel->Name())
                         {
-                            for (int i=0; i<(int) strlen(cname); i++)
+                            char *cname=strdup(channel->Name());
+                            if (cname)
                             {
-                                if (cname[i]==' ') cname[i]='_';
-                                if (cname[i]=='.') cname[i]='_';
-                                if (cname[i]=='/') cname[i]='_';
-                            }
-                            if (!strcmp(name,cname))
-                            {
-                                Add(new cSetupMarkAdListItem(cString::sprintf("%i\t%s",channel->Number(),channel->Name())));
+                                for (int i=0; i<(int) strlen(cname); i++)
+                                {
+                                    if (cname[i]==' ') cname[i]='_';
+                                    if (cname[i]=='.') cname[i]='_';
+                                    if (cname[i]=='/') cname[i]='_';
+                                }
+                                if (!strcmp(name,cname))
+                                {
+                                    Add(new cSetupMarkAdListItem(cString::sprintf("%i\t%s",channel->Number(),channel->Name())));
+                                    free(cname);
+                                    break;
+                                }
                                 free(cname);
-                                break;
                             }
-                            free(cname);
                         }
                     }
+                    free(name);
+#if APIVERSNUM>=20301
+                    StateKey.Remove();
                 }
-
-                free(name);
+#endif
             }
         }
     }

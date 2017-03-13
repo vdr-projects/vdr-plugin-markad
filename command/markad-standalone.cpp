@@ -158,7 +158,7 @@ void *cOSDMessage::send(void *posd)
     struct sockaddr_in name;
     name.sin_family = AF_INET;
     name.sin_port = htons(osd->port);
-    memcpy(&name.sin_addr.s_addr,host->h_addr,sizeof(host->h_addr));
+    memcpy(&name.sin_addr.s_addr,host->h_addr,host->h_length);
     uint size = sizeof(name);
 
     int sock;

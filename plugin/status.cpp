@@ -140,34 +140,49 @@ void cStatusMarkAd::TimerChange(const cTimer *Timer, eTimerChange Change)
 bool cStatusMarkAd::LogoExists(const cDevice *Device,const char *FileName)
 {
     if (!FileName) return false;
+    char *cname=NULL;
+#if APIVERSNUM>=20301
+    const cTimer *timer=NULL;
+    cStateKey StateKey;
+    if (const cTimers *Timers = cTimers::GetTimersRead(StateKey)) {
+        for (const cTimer *Timer=Timers->First(); Timer; Timer=Timers->Next(Timer))
+#else
     cTimer *timer=NULL;
     for (cTimer *Timer = Timers.First(); Timer; Timer=Timers.Next(Timer))
-    {
-#if APIVERSNUM>=10722
-        if (Timer->Recording() && const_cast<cDevice *>(Device)->IsTunedToTransponder(Timer->Channel()) &&
-                (difftime(time(NULL),Timer->StartTime())<60))
-        {
-            timer=Timer;
-            break;
-        }
-#else
-        if (Timer->Recording() && Device->IsTunedToTransponder(Timer->Channel()) &&
-                (difftime(time(NULL),Timer->StartTime())<60))
-        {
-            timer=Timer;
-            break;
-        }
 #endif
-    }
-    if (!timer) {
-        esyslog("markad: cannot find timer for '%s'",FileName);
-        return false;
-    }
+        {
+#if APIVERSNUM>=10722
+            if (Timer->Recording() && const_cast<cDevice *>(Device)->IsTunedToTransponder(Timer->Channel()) &&
+            (difftime(time(NULL),Timer->StartTime())<60))
+            {
+                timer=Timer;
+                break;
+            }
+#else
+            if (Timer->Recording() && Device->IsTunedToTransponder(Timer->Channel()) &&
+                    (difftime(time(NULL),Timer->StartTime())<60))
+            {
+                timer=Timer;
+                break;
+            }
+#endif
+        }
 
-    const cChannel *chan=timer->Channel();
-    if (!chan) return false;
-    char *cname=strdup(chan->Name());
+        if (!timer) {
+            esyslog("markad: cannot find timer for '%s'",FileName);
+        } else {
+            const cChannel *chan=timer->Channel();
+            if (chan) cname=strdup(chan->Name());
+        }
+
+#if APIVERSNUM>=20301
+        StateKey.Remove();
+    }
+#endif
+
+    if (!timer) return false;
     if (!cname) return false;
+
     for (int i=0; i<(int) strlen(cname); i++)
     {
         if (cname[i]==' ') cname[i]='_';
